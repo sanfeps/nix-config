@@ -1,0 +1,8 @@
+keys:
+  - &users
+    - &sanfe age1kpyzk29547qtzsrq0ffdmnjqp2nw6vsswscp8vrcz87zvdr23pwq29qqxg
+creation_rules:
+  - path_regex: hosts/common/secrets.ya?ml$
+    key_groups:
+      - age: 
+        - *sanfe
