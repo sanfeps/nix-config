@@ -6,7 +6,7 @@
 }: let
   ifTheyExist = groups: builtins.filter (group: builtins.hasAttr group config.users.groups) groups;
 in {
-  users.mutableUsers = false;
+  users.mutableUsers = true;
   users.users.sanfe = {
     isNormalUser = true;
     shell = pkgs.zsh;
@@ -23,7 +23,7 @@ in {
     ];
 
     openssh.authorizedKeys.keys = lib.splitString "\n" (builtins.readFile ../../../../home/sanfe/ssh.pub);
-    hashedPasswordFile = config.sops.secrets.sanfe-password.path;
+    initialPassword = "sanfe";
     packages = [pkgs.home-manager];
   };
 

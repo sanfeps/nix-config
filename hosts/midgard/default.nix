@@ -1,13 +1,30 @@
 {
   pkgs,
   inputs,
+  lib,
   ...
 }: {
   imports = [
+
+    #
+    # ===== Hardware =====
+    #
+    ./hardware-configuration.nix
     inputs.hardware.nixosModules.common-cpu-amd
     inputs.hardware.nixosModules.common-pc-ssd
-    
-    ./hardware-configuration.nix
+   
+    # 
+    # ===== Disk Layout =====
+    #
+    inputs.disko.nixosModules.disko
+    (import ../common/disks/btrfs-disk.nix {
+	lib = lib;
+        device = "/dev/sda";
+    })
+
+    #
+    # ===== Required Config =====
+    #
     ../common/core
     ../common/users/sanfe
   ];
@@ -18,6 +35,27 @@
   networking = {
     hostName = "midgard";
     useDHCP = true;
+  };
+
+  
+  boot.loader = {
+    systemd-boot.enable = true;
+    efi.canTouchEfiVariables = true;
+    timeout = 3;
+  };
+  boot.initrd = {
+    systemd.enable = true;
+    # This mostly mirrors what is generated on qemu from nixos-generate-config in hardware-configuration.nix
+    kernelModules = [
+      "xhci_pci"
+      "ohci_pci"
+      "ehci_pci"
+      "virtio_pci"
+      "ahci"
+      "usbhid"
+      "sr_mod"
+      "virtio_blk"
+    ];
   };
 
   boot = {

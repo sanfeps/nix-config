@@ -19,10 +19,10 @@
     #   url = "github:nix-community/nixgl";
     #   inputs.nixpkgs.follows = "nixpkgs";
     # };
-    # disko = {
-    #   url = "github:nix-community/disko";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # nix-gaming = {
     #   url = "github:fufexan/nix-gaming";
     #   inputs.nixpkgs.follows = "nixpkgs";
