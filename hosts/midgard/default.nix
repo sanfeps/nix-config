@@ -17,7 +17,7 @@
     # ===== Disk Layout =====
     #
     inputs.disko.nixosModules.disko
-    (import ../common/disks/btrfs-disk.nix {
+    (import ../common/disks/btrfs-luks-disk.nix {
 	lib = lib;
         device = "/dev/sda";
     })
