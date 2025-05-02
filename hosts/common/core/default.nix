@@ -13,18 +13,25 @@
       # ./podman.nix
       ./sops.nix
       ./zsh.nix
+      ./optin-persistence.nix
       # ./steam-hardware.nix
       # ./systemd-initrd.nix
       # ./gamemode.nix
       # ./nix-ld.nix
       # ./prometheus-node-exporter.nix
       # ./kdeconnect.nix
+      ../../../modules/common/host-spec.nix
     ]
     ++ (builtins.attrValues outputs.nixosModules);
 
   home-manager.useGlobalPkgs = true;
   home-manager.extraSpecialArgs = {
     inherit inputs outputs;
+  };
+
+  hostSpec = {
+    username = "sanfe";
+    persistFolder = "/persist";
   };
 
   nixpkgs = {

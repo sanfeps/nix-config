@@ -2,6 +2,7 @@
   pkgs,
   inputs,
   lib,
+  config,
   ...
 }: {
   imports = [
@@ -17,8 +18,9 @@
     # ===== Disk Layout =====
     #
     inputs.disko.nixosModules.disko
-    (import ../common/disks/btrfs-luks-disk.nix {
+    (import ../common/disks/btrfs-luks-impermanence-disk.nix {
 	lib = lib;
+	config = config;
         device = "/dev/sda";
     })
 
