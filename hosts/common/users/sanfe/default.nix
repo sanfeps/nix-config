@@ -27,6 +27,7 @@ in {
     packages = [pkgs.home-manager];
   };
 
+  environment.persistence."${config.hostSpec.persistFolder}" = { files = ["${config.users.users.sanfe.home}"]; }; 
   sops.secrets.sanfe-password = {
     sopsFile = ../../secrets.yaml;
     neededForUsers = true;
