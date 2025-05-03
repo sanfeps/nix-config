@@ -32,6 +32,9 @@ in {
   };
 
   programs.ssh = {
+    startAgent = true;
+    enableAskPassword = true;
+
     # Each hosts public key
     knownHosts = lib.genAttrs hosts (hostname: {
       publicKeyFile = ../../${hostname}/ssh_host_ed25519_key.pub;
