@@ -3,6 +3,7 @@
   inputs,
   outputs,
   pkgs,
+  lib,
   ...
 }: {
   imports =
@@ -46,7 +47,7 @@
   networking.domain = "sfg.lo";
 
   # Cleanup stuff included by default
-  services.speechd.enable = false;
+  services.speechd.enable = lib.mkForce false;
 
   # System packages
   environment.systemPackages = with pkgs; [

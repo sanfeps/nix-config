@@ -29,6 +29,11 @@
     #
     ../common/core
     ../common/users/sanfe
+
+    #
+    # ===== Optional Config =====
+    #
+    ../optional/gnome.nix
   ];
 
   environment.systemPackages = with pkgs; [
