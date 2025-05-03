@@ -2,6 +2,7 @@
 {
   inputs,
   outputs,
+  pkgs,
   ...
 }: {
   imports =
@@ -46,4 +47,12 @@
 
   # Cleanup stuff included by default
   services.speechd.enable = false;
+
+  # System packages
+  environment.systemPackages = with pkgs; [
+
+    git
+    vim
+
+  ];
 }
