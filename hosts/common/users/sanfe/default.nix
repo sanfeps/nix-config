@@ -27,11 +27,14 @@ in {
     packages = [pkgs.home-manager];
   };
 
-  environment.persistence."${config.hostSpec.persistFolder}" = { files = ["${config.users.users.sanfe.home}"]; }; 
-  sops.secrets.sanfe-password = {
-    sopsFile = ../../secrets.yaml;
-    neededForUsers = true;
-  };
+    environment.persistence = {
+	"${config.hostSpec.persistFolder}".directories = ["/home/sanfe"]; 
+    };
+    
+    sops.secrets.sanfe-password = {
+	sopsFile = ../../secrets.yaml;
+	neededForUsers = true;
+    };
 
   # home-manager.users.sanfe = import ../../../../home/sanfe/${config.networking.hostName}.nix;
 
