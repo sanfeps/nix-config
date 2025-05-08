@@ -55,7 +55,7 @@ in {
     pkgs.protontricks
   ];
   home.persistence = {
-    "persist/${config.home.homeDirectory}" = {
+    "/persist/${config.home.homeDirectory}" = {
       allowOther = true;
       directories = [
         ".local/share/Steam"

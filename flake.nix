@@ -117,7 +117,7 @@
       
       # Main desktop
       "sanfe@midgard" = lib.homeManagerConfiguration {
-        modules = [./home/sanfe/midgard.nix ./home/sanfe/nixpkgs.nix];
+        modules = [./home/sanfe/midgard.nix];
         pkgs = pkgsFor.x86_64-linux;
         extraSpecialArgs = {
           inherit inputs outputs;

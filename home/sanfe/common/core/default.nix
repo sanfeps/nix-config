@@ -35,6 +35,7 @@
     username = lib.mkDefault "sanfe";
     homeDirectory = lib.mkDefault "/home/${config.home.username}";
     sessionPath = ["$HOME/.local/bin"];
+    stateVersion = "24.11";
     sessionVariables = {
       FLAKE = "$HOME/Documents/NixConfig";
     };
