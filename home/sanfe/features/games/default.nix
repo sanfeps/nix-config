@@ -6,7 +6,7 @@
   home = {
     packages = with pkgs; [gamescope];
     persistence = {
-      "${config.hostSpec.persistFolder}/${config.home.homeDirectory}" = {
+      "persist/${config.home.homeDirectory}" = {
         allowOther = true;
         directories = [
           "Games"
