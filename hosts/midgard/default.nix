@@ -33,12 +33,13 @@
     #
     # ===== Optional Config =====
     #
-    ../optional/gnome.nix
+    ../optional/greetd.nix
   ];
 
   environment.systemPackages = with pkgs; [
     
   ];
+
   networking = {
     hostName = "midgard";
     useDHCP = true;
