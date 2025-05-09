@@ -16,6 +16,7 @@
   rgba = color: alpha: "rgba(${lib.removePrefix "#" color}${alpha})";
 in {
   imports = [
+    ../common
     ../common/wayland-wm
 
     ./keymaps.nix
