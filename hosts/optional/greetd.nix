@@ -7,25 +7,22 @@ let
     exec ${command}; ${pkgs.sway}/bin/swaymsg exit
   ''}";
 in {
-  # Usuario temporal para ejecutar la pantalla de login
   users.extraUsers.greeter = {
     isSystemUser = true;
     home = "/tmp/greeter-home";
     createHome = true;
   };
 
-  # Activar greetd y usar sway + regreet como pantalla de login
   services.greetd = {
     enable = true;
     settings = {
       default_session = {
         user = "greeter";
-        command = swayKiosk (lib.getExe pkgs.regreet);
+        command = swayKiosk (lib.getExe config.programs.regreet.package);
       };
     };
   };
 
-  # Habilitar regreet sin configuración personalizada
   programs.regreet.enable = true;
 }
 
