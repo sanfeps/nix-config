@@ -33,7 +33,8 @@ in {
     grimblast
     hyprpicker
   ];
-
+  
+  programs.hyprland.enable = true;
   wayland.windowManager.hyprland = {
     enable = true;
     package = config.lib.nixGL.wrap (pkgs.hyprland.override {
