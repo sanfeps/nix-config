@@ -33,17 +33,12 @@
     #
     # ===== Optional Config =====
     #
+    ../optional/greetd.nix
   ];
 
   environment.systemPackages = with pkgs; [
     
   ];
-  # Enable some basic X server options
-  services.xserver.enable = true;
-  services.xserver.displayManager = {
-    lightdm.enable = true;
-  };
-
 
   networking = {
     hostName = "midgard";
