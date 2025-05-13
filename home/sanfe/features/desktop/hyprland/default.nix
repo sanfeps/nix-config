@@ -22,16 +22,6 @@ in {
     ./keymaps.nix
   ];
 
-  services.xserver.displayManager.session = [
-    {
-      manage = "desktop";
-      name = "Hyprland";
-      start = ''
-        exec Hyprland
-      '';
-    }
-  ];
-
   xdg.portal = {
     extraPortals = [pkgs.xdg-desktop-portal-wlr];
     config.hyprland = {
