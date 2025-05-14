@@ -33,7 +33,7 @@
     #
     # ===== Optional Config =====
     #
-    ../optional/ly.nix
+    ../optional/greetd.nix
   ];
 
   environment.systemPackages = with pkgs; [
