@@ -52,6 +52,9 @@ in {
   Exec=Hyprland
   Type=Application
 '';
+
+  programs.hyprland.enable = true;
+
 }
 
 

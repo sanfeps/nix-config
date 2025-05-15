@@ -4,7 +4,6 @@
 }: {
   imports = [
     ./common/core
-    ./features/desktop/hyprland
     ./features/games
   ];
 
