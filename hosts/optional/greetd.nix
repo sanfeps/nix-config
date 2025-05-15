@@ -9,6 +9,7 @@
   homeSharePaths = lib.flatten [
     (lib.mapAttrsToList (_: v: "${v.home.path}/share") homeCfgs)
     "/home/sanfe/.nix-profile/share/wayland-sessions"
+    "/home/sanfe/.local/state/nix/profiles/profile/share/wayland-sessions"
   ];
   vars = ''XDG_DATA_DIRS="$XDG_DATA_DIRS:${lib.concatStringsSep ":" homeSharePaths}" GTK_USE_PORTAL=0'';
 
@@ -29,6 +30,9 @@ in {
 
   programs.regreet = {
     enable = true;
+    settings = {
+      cache_directory = "/var/lib/greeter-home/.cache/regreet";
+    };
   };
   services.greetd = {
     enable = true;
