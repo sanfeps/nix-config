@@ -8,7 +8,7 @@
   #homeSharePaths = lib.mapAttrsToList (_: v: "${v.home.path}/share") homeCfgs;
   homeSharePaths = lib.flatten [
     (lib.mapAttrsToList (_: v: "${v.home.path}/share") homeCfgs)
-    "/home/sanfe/.nix-profile/share"
+    "/home/sanfe/.nix-profile/share/wayland-sessions"
   ];
   vars = ''XDG_DATA_DIRS="$XDG_DATA_DIRS:${lib.concatStringsSep ":" homeSharePaths}" GTK_USE_PORTAL=0'';
 
@@ -40,6 +40,14 @@ in {
       { directory = "/var/lib/greeter-home"; }
     ];
   };
+
+  environment.etc."wayland-sessions/hyprland.desktop".text = ''
+  [Desktop Entry]
+  Name=Hyprland
+  Comment=Hyprland Wayland Compositor
+  Exec=Hyprland
+  Type=Application
+'';
 }
 
 
