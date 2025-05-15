@@ -5,7 +5,11 @@
   ...
 }: let
   homeCfgs = config.home-manager.users;
-  homeSharePaths = lib.mapAttrsToList (_: v: "${v.home.path}/share") homeCfgs;
+  #homeSharePaths = lib.mapAttrsToList (_: v: "${v.home.path}/share") homeCfgs;
+  homeSharePaths = lib.flatten [
+    (lib.mapAttrsToList (_: v: "${v.home.path}/share") homeCfgs)
+    "/home/sanfe/.nix-profile/share"
+  ];
   vars = ''XDG_DATA_DIRS="$XDG_DATA_DIRS:${lib.concatStringsSep ":" homeSharePaths}" GTK_USE_PORTAL=0'';
 
   sway-kiosk = command: "${lib.getExe pkgs.sway} --unsupported-gpu --config ${pkgs.writeText "kiosk.config" ''
