@@ -41,6 +41,7 @@ in {
       { directory = "/var/lib/greeter-home"; }
     ];
   };
+  environment.variables.SESSION_DIRS = "/home/sanfe/.nix-profile/share/wayland-sessions:/home/sanfe/.local/state/nix/profiles/profile/share/wayland-sessions";
 }
 
 
