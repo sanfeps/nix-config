@@ -31,8 +31,7 @@ in {
   services.displayManager.ly.enable = true;
 
   environment.etc."ly/config.ini".text = lib.mkForce ''
-    [Environment]
-    wayland_sessions=/home/sanfe/.nix-profile/share/wayland-sessions
+    waylandsessions = /home/sanfe/.nix-profile/share/wayland-sessions
   '';
 
   # programs.regreet = {
