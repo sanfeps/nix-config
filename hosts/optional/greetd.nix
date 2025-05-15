@@ -11,7 +11,7 @@
     "/home/sanfe/.nix-profile/share/wayland-sessions"
     "/home/sanfe/.local/state/nix/profiles/profile/share/wayland-sessions"
   ];
-  vars = ''XDG_DATA_DIRS="$XDG_DATA_DIRS:${lib.concatStringsSep ":" homeSharePaths}" GTK_USE_PORTAL=0'';
+  vars = ''XDG_DATA_DIRS="$XDG_DATA_DIRS:${lib.concatStringsSep ":" homeSharePaths}" GTK_USE_PORTAL=0 SESSION_DIRS=$SESSION_DIRS:/home/sanfe/.nix-profile/share/wayland-sessions:/home/sanfe/.local/state/nix/profiles/profile/share/wayland-sessions'';
 
   sway-kiosk = command: "${lib.getExe pkgs.sway} --unsupported-gpu --config ${pkgs.writeText "kiosk.config" ''
     output * bg #000000 solid_color
@@ -41,9 +41,6 @@ in {
       { directory = "/var/lib/greeter-home"; }
     ];
   };
-
-  programs.hyprland.enable = true;
-
 }
 
 
