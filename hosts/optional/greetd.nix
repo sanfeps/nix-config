@@ -22,19 +22,26 @@
     exec '${vars} ${command}; ${pkgs.sway}/bin/swaymsg exit'
   ''}";
 in {
-  users.extraUsers.greeter = {
-    # For caching and such
-    home = "/var/lib/greeter-home";
-    createHome = true;
-  };
+  # users.extraUsers.greeter = {
+  #   # For caching and such
+  #   home = "/var/lib/greeter-home";
+  #   createHome = true;
+  # };
 
-  programs.regreet = {
-    enable = true;
-  };
-  services.greetd = {
-    enable = true;
-    settings.default_session.command = sway-kiosk (lib.getExe config.programs.regreet.package);
-  };
+  services.displayManager.ly.enable = true;
+
+  environment.etc."ly/config.ini".text = lib.mkForce ''
+    [Environment]
+    wayland_sessions=/home/sanfe/.nix-profile/share/wayland-sessions
+  '';
+
+  # programs.regreet = {
+  #   enable = true;
+  # };
+  # services.greetd = {
+  #   enable = true;
+  #   settings.default_session.command = sway-kiosk (lib.getExe config.programs.regreet.package);
+  # };
 
   environment.persistence."/persist" = {
     directories = [
