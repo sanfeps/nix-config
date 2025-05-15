@@ -30,9 +30,6 @@ in {
 
   programs.regreet = {
     enable = true;
-    settings = {
-      cache_directory = "/var/lib/greeter-home/.cache/regreet";
-    };
   };
   services.greetd = {
     enable = true;
@@ -44,14 +41,6 @@ in {
       { directory = "/var/lib/greeter-home"; }
     ];
   };
-
-  environment.etc."wayland-sessions/hyprland.desktop".text = ''
-  [Desktop Entry]
-  Name=Hyprland
-  Comment=Hyprland Wayland Compositor
-  Exec=Hyprland
-  Type=Application
-'';
 
   programs.hyprland.enable = true;
 
