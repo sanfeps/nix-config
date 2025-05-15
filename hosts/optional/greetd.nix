@@ -19,7 +19,7 @@
 in {
   users.extraUsers.greeter = {
     # For caching and such
-    home = "/tmp/greeter-home";
+    home = "/var/lib/greeter-home";
     createHome = true;
   };
 
@@ -29,6 +29,12 @@ in {
   services.greetd = {
     enable = true;
     settings.default_session.command = sway-kiosk (lib.getExe config.programs.regreet.package);
+  };
+
+  environment.persistence."/persist" = {
+    directories = [
+      { directory = "/var/lib/greeter-home"; }
+    ];
   };
 }
 
