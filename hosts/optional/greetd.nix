@@ -30,9 +30,9 @@ in {
 
   services.displayManager.ly.enable = true;
 
-  environment.etc."ly/config.ini".text = lib.mkForce ''
-    sed -i 's|^waylandsessions=.*|waylandsessions=/home/sanfe/.nix-profile/share/wayland-sessions|' /etc/ly/config.ini
-     '';
+  system.activationScripts.lyWaylandPatch.text = ''
+	sed -i 's|^waylandsessions=.*|waylandsessions=/home/sanfe/.nix-profile/share/wayland-sessions|' /etc/ly/config.ini
+    '';
 
   # programs.regreet = {
   #   enable = true;
