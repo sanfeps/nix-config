@@ -12,6 +12,8 @@ in {
     settings = {
 	waylandsessions = "${lib.concatStringsSep ":" homeSharePaths}/wayland-sessions";
 	xsessions = "${lib.concatStringsSep ":" homeSharePaths}/xsessions";
+	xinitrc = "null";
+	animation = "matrix";
     };
   };  
 
