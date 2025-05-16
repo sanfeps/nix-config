@@ -36,7 +36,7 @@ in {
 	neededForUsers = true;
     };
 
-  # home-manager.users.sanfe = import ../../../../home/sanfe/${config.networking.hostName}.nix;
+    home-manager.users.sanfe = import ../../../../home/sanfe/${config.networking.hostName}.nix;
 
   # security.pam.services = {
     # swaylock = {};
