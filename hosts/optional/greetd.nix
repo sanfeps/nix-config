@@ -28,11 +28,13 @@ in {
   #   createHome = true;
   # };
 
-  services.displayManager.ly.enable = true;
-
-  system.activationScripts.lyWaylandPatch.text = ''
-	sed -i 's|^waylandsessions=.*|waylandsessions=/home/sanfe/.nix-profile/share/wayland-sessions|' /etc/ly/config.ini
-    '';
+  services.displayManager.ly = {
+    enable = true;
+    settings = {
+	waylandsessions = "/home/sanfe/.nix-profile/share/wayland-sessions";
+    };
+  };  
+  
 
   # programs.regreet = {
   #   enable = true;
