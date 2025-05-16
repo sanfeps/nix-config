@@ -5,7 +5,8 @@
   ...
 }: let
   homeCfgs = config.home-manager.users;
-  homeSharePaths = lib.mapAttrsToList (_: v: "/home/${v.home.username}/.nix-profile/share") homeCfgs;
+  homeSharePaths = lib.mapAttrsToList (_: v: "${v.home.path}/share") homeCfgs;
+
   #vars = ''XDG_DATA_DIRS="$XDG_DATA_DIRS:${lib.concatStringsSep ":" homeSharePaths}" GTK_USE_PORTAL=0'';
 
   # sway-kiosk = command: "${lib.getExe pkgs.sway} --unsupported-gpu --config ${pkgs.writeText "kiosk.config" ''
@@ -27,8 +28,7 @@ in {
     enable = true;
     settings = {
 	waylandsessions = "${lib.concatStringsSep ":" homeSharePaths}/wayland-sessions";
-	xsessions = "${lib.concatStringsSep ":" homeSharePaths}";
-	asterisk = "0x2022";
+	xsessions = "${lib.concatStringsSep ":" homeSharePaths}/xsessions";
     };
   };  
   
