@@ -1,11 +1,12 @@
 {pkgs, ...}: {
   imports = [
     ./alacritty.nix
-    ./waybar.nix
     ./wofi.nix
+    ./quickshell/quickshell.nix
   ];
 
   home.packages = with pkgs; [
+	librewolf
   ];
 
   home.sessionVariables = {
