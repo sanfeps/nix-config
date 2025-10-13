@@ -33,7 +33,17 @@
     #
     # ===== Optional Config =====
     #
+    ../optional/podman.nix
   ];
+
+  # Jellyfin media server container
+  services.containers.jellyfin = {
+    enable = true;
+    port = 8096;
+    mediaPath = "/mnt/media";
+    openFirewall = true;
+    enableHardwareAcceleration = false;  # Server likely doesn't have /dev/dri
+  };
 
   environment.systemPackages = with pkgs; [
   ];
