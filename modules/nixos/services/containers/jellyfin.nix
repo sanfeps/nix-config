@@ -1,5 +1,10 @@
 # Jellyfin media server container module
 # Provides a declarative way to run Jellyfin in a Podman container
+#
+# TODO: Migrate to quadlet-nix for proper rootless container support.
+# Currently, containers run as systemd services under root, which is less secure.
+# Quadlet-nix would allow running containers as user services via Home Manager.
+# See: https://github.com/SEIAROTg/quadlet-nix
 { config, lib, pkgs, ... }:
 with lib;
 let
@@ -49,13 +54,6 @@ in {
       type = types.bool;
       default = true;
       description = "Enable hardware acceleration for video transcoding (requires /dev/dri)";
-    };
-
-    user = mkOption {
-      type = types.str;
-      default = "root";
-      description = "User to run the container as (UID:GID format, e.g., '1000:1000')";
-      example = "1000:1000";
     };
 
     timezone = mkOption {

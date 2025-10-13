@@ -148,6 +148,8 @@ Declarative Podman container services are managed through custom NixOS modules l
 
 **Future Considerations**: The current implementation uses `virtualisation.oci-containers` which is the standard NixOS approach. For more advanced features like pod support (grouping multiple containers), better network management with subnets, or rootless containers via Home Manager, consider migrating to `quadlet-nix` (github:SEIAROTg/quadlet-nix). Quadlet provides native Podman Quadlet integration with declarative support for pods, networks, volumes, and auto-update functionality.
 
+**Security Note**: Currently, containers run as systemd services under root. While Podman provides some isolation, this is not ideal from a security perspective. A future migration to quadlet-nix would enable proper rootless containers running as user services, providing better security isolation.
+
 ## Common Development Workflows
 
 ### Adding a New Host
