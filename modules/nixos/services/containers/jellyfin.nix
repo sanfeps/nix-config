@@ -89,6 +89,7 @@ in {
     systemd.tmpfiles.rules = [
       "d ${cfg.configPath} 0755 root root -"
       "d ${cfg.cachePath} 0755 root root -"
+      "d ${cfg.mediaPath} 0755 root root -"  # Create media directory as well
     ];
 
     # Define the Jellyfin container
