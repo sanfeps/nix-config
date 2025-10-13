@@ -1,0 +1,83 @@
+{
+  pkgs,
+  inputs,
+  lib,
+  config,
+  ...
+}: {
+  imports = [
+
+    #
+    # ===== Hardware =====
+    #
+    ./hardware-configuration.nix
+    inputs.hardware.nixosModules.common-cpu-amd
+    inputs.hardware.nixosModules.common-pc-ssd
+   
+    # 
+    # ===== Disk Layout =====
+    #
+    inputs.disko.nixosModules.disko
+    (import ../common/disks/btrfs-luks-impermanence-disk.nix {
+	lib = lib;
+	config = config;
+        device = "/dev/sdb";
+    })
+
+    #
+    # ===== Required Config =====
+    #
+    ../common/core
+    ../common/users/sanfe
+
+    #
+    # ===== Optional Config =====
+    #
+  ];
+
+  environment.systemPackages = with pkgs; [
+  ];
+
+  networking = {
+    hostName = "asgard";
+    useDHCP = true;
+  };
+
+  
+  boot.loader = {
+    systemd-boot.enable = true;
+    efi.canTouchEfiVariables = true;
+    timeout = 3;
+  };
+  boot.initrd = {
+    systemd.enable = true;
+    # This mostly mirrors what is generated on qemu from nixos-generate-config in hardware-configuration.nix
+    kernelModules = [
+      "xhci_pci"
+      "ohci_pci"
+      "ehci_pci"
+      "virtio_pci"
+      "ahci"
+      "usbhid"
+      "sr_mod"
+      "virtio_blk"
+   #   "nvidia"
+   #   "i915"
+   #   "nvidia_modeset"
+   #   "nvidia_drm" 
+    ];
+  };
+
+  boot = {
+    kernelPackages = pkgs.linuxKernel.packages.linux_xanmod_latest;
+    binfmt.emulatedSystems = [
+      "aarch64-linux"
+      "i686-linux"
+    ];
+  };
+
+  programs = {
+  };
+  
+  system.stateVersion = "24.11";
+}

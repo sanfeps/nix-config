@@ -3,6 +3,7 @@
     ./alacritty.nix
     ./wofi.nix
     ./quickshell/quickshell.nix
+    ./vscode.nix
   ];
 
   home.packages = with pkgs; [

@@ -16,6 +16,7 @@
       ./sops.nix
       ./zsh.nix
       ./optin-persistence.nix
+      ./mullvad-vpn.nix
       # ./steam-hardware.nix
       # ./systemd-initrd.nix
       # ./gamemode.nix

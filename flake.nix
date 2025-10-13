@@ -92,12 +92,12 @@
       #   };
       # };
       # # Core server (Vultr)
-      # asgard = lib.nixosSystem {
-      #   modules = [./hosts/asgard];
-      #   specialArgs = {
-      #     inherit inputs outputs;
-      #   };
-      # };
+      asgard = lib.nixosSystem {
+         modules = [./hosts/asgard];
+         specialArgs = {
+           inherit inputs outputs;
+         };
+      };
       # # Build and game server (Oracle)
       # nidavellir = lib.nixosSystem {
       #   modules = [./hosts/nidavellir];
@@ -139,14 +139,14 @@
     #     };
     #   };
     #
-    #   # Core server (Vultr)
-    #   "sanfe@asgard" = lib.homeManagerConfiguration {
-    #     modules = [./home/sanfe/asgard.nix ./home/sanfe/nixpkgs.nix];
-    #     pkgs = pkgsFor.x86_64-linux;
-    #     extraSpecialArgs = {
-    #       inherit inputs outputs;
-    #     };
-    #   };
+       # Core server (Vultr)
+       "sanfe@asgard" = lib.homeManagerConfiguration {
+         modules = [./home/sanfe/asgard.nix];
+         pkgs = pkgsFor.x86_64-linux;
+         extraSpecialArgs = {
+           inherit inputs outputs;
+         };
+       };
     #
     #   # Build and game server (Oracle)
     #   "sanfe@nidavellir" = lib.homeManagerConfiguration {
