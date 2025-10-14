@@ -1,18 +1,15 @@
-import QtQuick 
-import QtQuick.Controls 
-import QtQuick.Layouts 
-
-import Quickshell 
-import Quickshell.Wayland 
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Wayland
+import "../widgets" as Widgets
+import "../.."
 
 Scope {
     id: bar
 
-    // Este es un ejemplo mínimo, puedes poner aquí tus configuraciones
-    property bool showBackground: true
-
     Variants {
-        // Para cada pantalla disponible
         model: Quickshell.screens
 
         PanelWindow {
@@ -20,7 +17,6 @@ Scope {
             required property ShellScreen modelData
             screen: modelData
 
-            // Barra básica
             WlrLayershell.namespace: "quickshell:bar"
             implicitHeight: 32
             color: "transparent"
@@ -31,55 +27,50 @@ Scope {
                 right: true
             }
 
+            // Main container
             Rectangle {
-                id: barBackground
                 anchors.fill: parent
-                color: showBackground ? "#222" : "transparent"
-            }
+                color: "#1e1e2e"  // Dark background
 
-            RowLayout {
-                id: mainLayout
-                anchors.fill: parent
-                spacing: 10
-                anchors.margins: 4
-
-                // Lado izquierdo
+                // Subtle bottom border for depth
                 Rectangle {
-                    width: 100
-                    height: parent.height
-                    color: "#444"
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Left"
-                        color: "white"
-                    }
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 1
+                    color: "#313244"
                 }
 
-                // Centro
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: parent.height
-                    color: "#555"
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Center"
-                        color: "white"
-                    }
-                }
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 12
 
-                // Lado derecho
-                Rectangle {
-                    width: 100
-                    height: parent.height
-                    color: "#444"
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Right"
-                        color: "white"
+                    // Left section - Workspaces
+                    Widgets.Workspaces {
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    // Center section - Window Title
+                    Widgets.WindowTitle {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    // Right section - System Tray
+                    Widgets.NetworkInfo {
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    Widgets.Volume {
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    Widgets.Clock {
+                        Layout.alignment: Qt.AlignVCenter
                     }
                 }
             }
         }
     }
 }
- 
