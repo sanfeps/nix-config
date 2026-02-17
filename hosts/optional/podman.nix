@@ -1,6 +1,6 @@
 # Base Podman configuration for container services
 # This provides the foundation for declarative container management
-{ pkgs, ... }: {
+{pkgs, ...}: {
   # Enable common container config files in /etc/containers
   virtualisation.containers.enable = true;
 
@@ -29,7 +29,7 @@
 
   # Useful tools for container management
   environment.systemPackages = with pkgs; [
-    podman-compose  # Docker-compose compatibility
-    podman-tui      # Terminal UI for managing containers
+    podman-compose # Docker-compose compatibility
+    podman-tui # Terminal UI for managing containers
   ];
 }

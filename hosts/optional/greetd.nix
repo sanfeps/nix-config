@@ -10,12 +10,12 @@ in {
   services.displayManager.ly = {
     enable = true;
     settings = {
-	waylandsessions = "${lib.concatStringsSep ":" homeSharePaths}/wayland-sessions";
-	xsessions = "${lib.concatStringsSep ":" homeSharePaths}/xsessions";
-	xinitrc = "null";
-	animation = "matrix";
+      waylandsessions = "${lib.concatStringsSep ":" homeSharePaths}/wayland-sessions";
+      xsessions = "${lib.concatStringsSep ":" homeSharePaths}/xsessions";
+      xinitrc = "null";
+      animation = "matrix";
     };
-  };  
+  };
 
   environment.persistence = {
     "${config.hostSpec.persistFolder}" = {
@@ -25,5 +25,3 @@ in {
     };
   };
 }
-
-
