@@ -29,7 +29,7 @@ in {
             type = types.int;
             default = 60;
           };
-	  x = lib.mkOption {
+          x = lib.mkOption {
             type = lib.types.int;
             default = 0;
           };
@@ -37,7 +37,7 @@ in {
             type = lib.types.int;
             default = 0;
           };
-	  transform = lib.mkOption {
+          transform = lib.mkOption {
             type = lib.types.int;
             default = 0;
           };
@@ -49,7 +49,7 @@ in {
             type = types.nullOr types.str;
             default = null;
           };
-	  vrr = lib.mkOption {
+          vrr = lib.mkOption {
             type = lib.types.int;
             description = "Variable Refresh Rate aka Adaptive Sync aka AMD FreeSync.\nValues are oriented towards hyprland's vrr values which are:\n0 = off, 1 = on, 2 = fullscreen only\nhttps://wiki.hyprland.org/Configuring/Variables/#misc";
             default = 0;

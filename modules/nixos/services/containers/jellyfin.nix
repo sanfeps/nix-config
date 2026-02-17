@@ -5,9 +5,13 @@
 # Currently, containers run as systemd services under root, which is less secure.
 # Quadlet-nix would allow running containers as user services via Home Manager.
 # See: https://github.com/SEIAROTg/quadlet-nix
-{ config, lib, pkgs, ... }:
-with lib;
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+with lib; let
   cfg = config.services.containers.jellyfin;
 in {
   options.services.containers.jellyfin = {
@@ -66,7 +70,7 @@ in {
       type = types.listOf types.str;
       default = [];
       description = "Additional volume mounts for the container";
-      example = [ "/mnt/music:/music:ro" "/mnt/photos:/photos:ro" ];
+      example = ["/mnt/music:/music:ro" "/mnt/photos:/photos:ro"];
     };
   };
 
@@ -87,7 +91,7 @@ in {
     systemd.tmpfiles.rules = [
       "d ${cfg.configPath} 0755 root root -"
       "d ${cfg.cachePath} 0755 root root -"
-      "d ${cfg.mediaPath} 0755 root root -"  # Create media directory as well
+      "d ${cfg.mediaPath} 0755 root root -" # Create media directory as well
     ];
 
     # Define the Jellyfin container
@@ -99,11 +103,13 @@ in {
         "${toString cfg.port}:8096"
       ];
 
-      volumes = [
-        "${cfg.configPath}:/config"
-        "${cfg.cachePath}:/cache"
-        "${cfg.mediaPath}:/media:ro"  # Read-only media access for safety
-      ] ++ cfg.extraVolumes;
+      volumes =
+        [
+          "${cfg.configPath}:/config"
+          "${cfg.cachePath}:/cache"
+          "${cfg.mediaPath}:/media:ro" # Read-only media access for safety
+        ]
+        ++ cfg.extraVolumes;
 
       environment = {
         TZ = cfg.timezone;
@@ -112,13 +118,14 @@ in {
 
       extraOptions =
         optionals cfg.enableHardwareAcceleration [
-          "--device=/dev/dri:/dev/dri"  # For hardware video transcoding
-        ] ++ [
-          "--network=host"  # Use host networking for better performance
+          "--device=/dev/dri:/dev/dri" # For hardware video transcoding
+        ]
+        ++ [
+          "--network=host" # Use host networking for better performance
         ];
     };
 
     # Open firewall port if requested
-    networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall [ cfg.port ];
+    networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall [cfg.port];
   };
 }

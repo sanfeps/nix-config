@@ -1,9 +1,5 @@
 # Specifications For Differentiating Hosts
-{
-  lib,
-  ...
-}:
-{
+{lib, ...}: {
   options.hostSpec = {
     # Data variables that don't dictate configuration settings
     username = lib.mkOption {

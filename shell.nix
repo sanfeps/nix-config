@@ -14,8 +14,8 @@
     ];
 
     shellHook = ''
-	export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
-	echo "🔐 SOPS_AGE_KEY_FILE set!"
+      export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+      echo "🔐 SOPS_AGE_KEY_FILE set!"
     '';
   };
 }
