@@ -36,5 +36,4 @@
     users = lib.attrValues config.users.users;
   in
     lib.concatLines (map mkHomePersist users);
-
 }

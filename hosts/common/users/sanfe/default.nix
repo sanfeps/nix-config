@@ -20,6 +20,8 @@ in {
       "video"
       "wheel"
       "wireshark"
+      "dialout"
+      "plugdev"
     ];
 
     openssh.authorizedKeys.keys = lib.splitString "\n" (builtins.readFile ../../../../home/sanfe/ssh.pub);
@@ -27,18 +29,14 @@ in {
     packages = [pkgs.home-manager];
   };
 
-    environment.persistence = {
-	"${config.hostSpec.persistFolder}".directories = ["/home/sanfe"]; 
-    };
-    
-    sops.secrets.sanfe-password = {
-	sopsFile = ../../secrets.yaml;
-	neededForUsers = true;
-    };
+  #sops.secrets.sanfe-password = {
+  #  sopsFile = ../../secrets.yaml;
+  #  neededForUsers = true;
+  #};
 
-    home-manager.users.sanfe = import ../../../../home/sanfe/${config.networking.hostName}.nix;
+  home-manager.users.sanfe = import ../../../../home/sanfe/${config.networking.hostName}.nix;
 
   # security.pam.services = {
-    # swaylock = {};
+  # swaylock = {};
   # };
 }

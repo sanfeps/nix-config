@@ -8,7 +8,6 @@
 }: {
   imports =
     [
-      inputs.impermanence.nixosModules.home-manager.impermanence
     ]
     ++ (builtins.attrValues outputs.homeManagerModules);
 
@@ -41,8 +40,7 @@
     };
 
     persistence = {
-      "/persist/${config.home.homeDirectory}" = {
-        defaultDirectoryMethod = "symlink";
+      "/persist" = {
         directories = [
           "Documents"
           "Downloads"
@@ -50,10 +48,47 @@
           "Videos"
           ".local/bin"
           ".local/share/nix" # trusted settings and repl history
+
+          # Projects
+          "nix-config"
+
+          # SSH and security
+          ".ssh"
+          ".pki"
+
+          # Claude Code
+          ".claude"
+
+          # Shell and editor state
+          ".vim"
+
+          # Nix/HM state
+          ".local/state/nix"
+          ".local/state/home-manager"
+          ".local/share/home-manager"
+
+          # Desktop state
+          ".config/dconf"
+          ".config/Mullvad VPN"
+          ".config/pulse"
+
+          # Audio
+          ".local/state/wireplumber"
+
+          # Misc
+          ".npm"
+          ".npm-global"
+          ".local/share/containers"
         ];
-        allowOther = true;
+        files = [
+          ".npmrc"
+          ".claude.json"
+        ];
       };
     };
   };
 
-  }
+  home.packages = with pkgs; [
+    wireguard-tools
+  ];
+}
