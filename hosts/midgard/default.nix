@@ -6,22 +6,21 @@
   ...
 }: {
   imports = [
-
     #
     # ===== Hardware =====
     #
     ./hardware-configuration.nix
     inputs.hardware.nixosModules.common-cpu-amd
     inputs.hardware.nixosModules.common-pc-ssd
-   
-    # 
+
+    #
     # ===== Disk Layout =====
     #
     inputs.disko.nixosModules.disko
     (import ../common/disks/btrfs-luks-impermanence-disk.nix {
-	lib = lib;
-	config = config;
-        device = "/dev/sda";
+      lib = lib;
+      config = config;
+      device = "/dev/sda";
     })
 
     #
@@ -35,6 +34,7 @@
     #
     ../optional/greetd.nix
     ../optional/wireless.nix
+    ../optional/podman.nix
   ];
 
   environment.systemPackages = with pkgs; [
@@ -49,7 +49,6 @@
     useDHCP = true;
   };
 
-  
   boot.loader = {
     systemd-boot.enable = true;
     efi.canTouchEfiVariables = true;
@@ -67,10 +66,10 @@
       "usbhid"
       "sr_mod"
       "virtio_blk"
-   #   "nvidia"
-   #   "i915"
-   #   "nvidia_modeset"
-   #   "nvidia_drm" 
+      #   "nvidia"
+      #   "i915"
+      #   "nvidia_modeset"
+      #   "nvidia_drm"
     ];
   };
 
@@ -83,33 +82,32 @@
   };
 
   programs = {
-    adb.enable = true;
     dconf.enable = true;
   };
-  
-  programs.steam.enable = true;
 
+  programs.steam.enable = true;
+  
   hardware.graphics.enable = true;
 
   #services.xserver = {
-   # enable = true;
-   # videoDrivers = [ "nvidia" ];
+  # enable = true;
+  # videoDrivers = [ "nvidia" ];
   #};
-# hardware.nvidia.open = true;
-# hardware = {
- # nvidia = {
+  # hardware.nvidia.open = true;
+  # hardware = {
+  # nvidia = {
   #    modesetting.enable = true;
-   #   powerManagement.enable = true;
+  #   powerManagement.enable = true;
 
-    #  prime = {
+  #  prime = {
 
-#	offload.enable = true;
-#        intelBusId = "PCI:0:2:0";
-#        nvidiaBusId = "PCI:2:0:0";
-#      };
-      # Usa el driver estable (puedes cambiarlo a legacy_390 si es necesario)
- #     package = config.boot.kernelPackages.nvidiaPackages.stable;
+  #	offload.enable = true;
+  #        intelBusId = "PCI:0:2:0";
+  #        nvidiaBusId = "PCI:2:0:0";
+  #      };
+  # Usa el driver estable (puedes cambiarlo a legacy_390 si es necesario)
+  #     package = config.boot.kernelPackages.nvidiaPackages.stable;
   #  };
-#};
+  #};
   system.stateVersion = "24.11";
 }

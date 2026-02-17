@@ -1,10 +1,8 @@
-{
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   imports = [
     ./common/core
     ./features/desktop/hyprland
+    ./features/desktop/niri
     ./features/games
   ];
 
