@@ -1,4 +1,5 @@
-# NOTE: ... is needed because dikso passes diskoFile
+# BIOS/Legacy boot compatible disk layout for VPS
+# NOTE: ... is needed because disko passes diskoFile
 {
   lib,
   device ? "/dev/vda",
@@ -14,18 +15,12 @@
         content = {
           type = "gpt";
           partitions = {
-            ESP = {
+            boot = {
               priority = 1;
-              name = "ESP";
+              name = "boot";
               start = "1M";
-              end = "512M";
-              type = "EF00";
-              content = {
-                type = "filesystem";
-                format = "vfat";
-                mountpoint = "/boot";
-                mountOptions = ["defaults"];
-              };
+              end = "2M";
+              type = "EF02"; # BIOS boot partition
             };
             root = {
               size = "100%";
