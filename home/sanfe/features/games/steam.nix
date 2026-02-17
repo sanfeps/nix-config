@@ -17,7 +17,7 @@
         stdenv.cc.cc.lib
         libkrb5
         keyutils
-        gamescope
+	gamescope
       ];
   };
 
@@ -39,8 +39,8 @@
       "steam://open/bigpicture"
     ];
   in
-    pkgs.writeTextDir "share/wayland-sessions/steam-sesson.desktop" # ini
-
+    pkgs.writeTextDir "share/wayland-sessions/steam-session.desktop" # ini
+    
     ''
       [Desktop Entry]
       Name=Steam Session
@@ -55,10 +55,10 @@ in {
     pkgs.protontricks
   ];
   home.persistence = {
-    "/persist/${config.home.homeDirectory}" = {
-      allowOther = true;
+    "/persist" = {
       directories = [
         ".local/share/Steam"
+        ".steam"
       ];
     };
   };
