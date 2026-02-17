@@ -6,22 +6,21 @@
   ...
 }: {
   imports = [
-
     #
     # ===== Hardware =====
     #
     ./hardware-configuration.nix
     inputs.hardware.nixosModules.common-cpu-amd
     inputs.hardware.nixosModules.common-pc-ssd
-   
-    # 
+
+    #
     # ===== Disk Layout =====
     #
     inputs.disko.nixosModules.disko
-    (import ../common/disks/btrfs-luks-impermanence-disk.nix {
-	lib = lib;
-	config = config;
-        device = "/dev/sdb";
+    (import ../common/disks/btrfs-disk-bios.nix {
+      lib = lib;
+      config = config;
+      device = "/dev/vda";
     })
 
     #
@@ -33,17 +32,17 @@
     #
     # ===== Optional Config =====
     #
-    ../optional/podman.nix
+    # ../optional/podman.nix
   ];
 
   # Jellyfin media server container
-  services.containers.jellyfin = {
-    enable = true;
-    port = 8096;
-    mediaPath = "/mnt/media";
-    openFirewall = true;
-    enableHardwareAcceleration = false;  # Server likely doesn't have /dev/dri
-  };
+  #  services.containers.jellyfin = {
+  #  enable = true;
+  #  port = 8096;
+  #  mediaPath = "/mnt/media";
+  #  openFirewall = true;
+  #  enableHardwareAcceleration = false;  # Server likely doesn't have /dev/dri
+  #};
 
   environment.systemPackages = with pkgs; [
   ];
@@ -53,12 +52,12 @@
     useDHCP = true;
   };
 
-  
-  boot.loader = {
-    systemd-boot.enable = true;
-    efi.canTouchEfiVariables = true;
-    timeout = 3;
-  };
+  # Disko handles GRUB installation automatically for BIOS boot
+  boot.loader.timeout = 3;
+
+  # Enable serial console for VPS console access
+  boot.kernelParams = ["console=ttyS0,115200" "console=tty1"];
+  systemd.services."serial-getty@ttyS0".enable = true;
   boot.initrd = {
     systemd.enable = true;
     # This mostly mirrors what is generated on qemu from nixos-generate-config in hardware-configuration.nix
@@ -71,10 +70,10 @@
       "usbhid"
       "sr_mod"
       "virtio_blk"
-   #   "nvidia"
-   #   "i915"
-   #   "nvidia_modeset"
-   #   "nvidia_drm" 
+      #   "nvidia"
+      #   "i915"
+      #   "nvidia_modeset"
+      #   "nvidia_drm"
     ];
   };
 
@@ -88,6 +87,6 @@
 
   programs = {
   };
-  
+
   system.stateVersion = "24.11";
 }
