@@ -33,7 +33,7 @@ in {
     grimblast
     hyprpicker
   ];
-  
+
   wayland.windowManager.hyprland = {
     enable = true;
     package = config.lib.nixGL.wrap (pkgs.hyprland.override {
@@ -89,12 +89,11 @@ in {
       windowrulev2 = let
         steamGame = "class:steam_app_[0-9]*";
         steamBigPicture = "title:Steam Big Picture Mode";
-      in
-        [
-          "immediate, ${steamGame}"
+      in [
+        "immediate, ${steamGame}"
 
-          "fullscreen, ${steamBigPicture}"
-        ];
+        "fullscreen, ${steamBigPicture}"
+      ];
       layerrule = [
         "animation fade,hyprpicker"
         "animation fade,selection"
@@ -110,6 +109,11 @@ in {
         "ignorezero,wofi"
 
         "noanim,wallpaper"
+
+        # Quickshell layer rules
+        "blur,quickshell:bar"
+        "ignorezero,quickshell:bar"
+        "animation fade,quickshell:bar"
       ];
 
       decoration = {
@@ -217,18 +221,17 @@ in {
               "SUPER,d,exec,${wofi} -S run"
             ]
         );
-	
-     monitor = (
+
+      monitor = (
         map (
-          m:
-          "${m.name},${
-            if m.enabled then
+          m: "${m.name},${
+            if m.enabled
+            then
               "${toString m.width}x${toString m.height}@${toString m.refreshRate}"
               + ",${toString m.x}x${toString m.y},1"
               + ",transform,${toString m.transform}"
               + ",vrr,${toString m.vrr}"
-            else
-              "disable"
+            else "disable"
           }"
         ) (config.monitors)
       );
