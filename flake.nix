@@ -13,10 +13,10 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    sops-nix = {
-      url = "github:mic92/sops-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    #sops-nix = {
+    #  url = "github:mic92/sops-nix";
+    #  inputs.nixpkgs.follows = "nixpkgs";
+    #};
     # nix-gl = {
     #   url = "github:nix-community/nixgl";
     #   inputs.nixpkgs.follows = "nixpkgs";
@@ -27,7 +27,12 @@
     };
 
     quickshell = {
-	url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
+      url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    noctalia = {
+	url = "github:noctalia-dev/noctalia-shell";
 	inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -37,7 +42,6 @@
     # };
 
     # My own programs, packaged with nix
-
   };
 
   outputs = {
@@ -49,9 +53,9 @@
   } @ inputs: let
     inherit (self) outputs;
     systemsList = [
-	"aarch64-linux"
-	"x86_64-darwin"
-	"x86_64-linux"
+      "aarch64-linux"
+      "x86_64-darwin"
+      "x86_64-linux"
     ];
 
     lib = nixpkgs.lib // home-manager.lib;
@@ -93,10 +97,10 @@
       # };
       # # Core server (Vultr)
       asgard = lib.nixosSystem {
-         modules = [./hosts/asgard];
-         specialArgs = {
-           inherit inputs outputs;
-         };
+        modules = [./hosts/asgard];
+        specialArgs = {
+          inherit inputs outputs;
+        };
       };
       # # Build and game server (Oracle)
       # nidavellir = lib.nixosSystem {
@@ -105,7 +109,7 @@
       #     inherit inputs outputs;
       #   };
       # };
-      # # Media server 
+      # # Media server
       # vanaheim = lib.nixosSystem {
       #   modules = [./hosts/vanaheim];
       #   specialArgs = {
@@ -120,51 +124,51 @@
 
     homeConfigurations = {
       # Standalone HM only
-      
+
       # Main desktop
-      "sanfe@midgard" = lib.homeManagerConfiguration {
-        modules = [./home/sanfe/midgard.nix];
+      #"sanfe@midgard" = lib.homeManagerConfiguration {
+      #  modules = [./home/sanfe/midgard.nix];
+      #  pkgs = pkgsFor.x86_64-linux;
+      #  extraSpecialArgs = {
+      #    inherit inputs outputs;
+      #  };
+      #};
+      #
+      #   # Personal laptop
+      #   "sanfe@raidho" = lib.homeManagerConfiguration {
+      #     modules = [ ./home/sanfe/raidho.nix ./home/sanfe/nixpkgs.nix ];
+      #     pkgs = pkgsFor.x86_64-linux;
+      #     extraSpecialArgs = {
+      #       inherit inputs outputs;
+      #     };
+      #   };
+      #
+      # Core server (Vultr)
+      "sanfe@asgard" = lib.homeManagerConfiguration {
+        modules = [./home/sanfe/asgard.nix];
         pkgs = pkgsFor.x86_64-linux;
         extraSpecialArgs = {
           inherit inputs outputs;
         };
       };
-    #
-    #   # Personal laptop
-    #   "sanfe@raidho" = lib.homeManagerConfiguration {
-    #     modules = [ ./home/sanfe/raidho.nix ./home/sanfe/nixpkgs.nix ];
-    #     pkgs = pkgsFor.x86_64-linux;
-    #     extraSpecialArgs = {
-    #       inherit inputs outputs;
-    #     };
-    #   };
-    #
-       # Core server (Vultr)
-       "sanfe@asgard" = lib.homeManagerConfiguration {
-         modules = [./home/sanfe/asgard.nix];
-         pkgs = pkgsFor.x86_64-linux;
-         extraSpecialArgs = {
-           inherit inputs outputs;
-         };
-       };
-    #
-    #   # Build and game server (Oracle)
-    #   "sanfe@nidavellir" = lib.homeManagerConfiguration {
-    #     modules = [./home/sanfe/nidavellir.nix ./home/sanfe/nixpkgs.nix];
-    #     pkgs = pkgsFor.aarch64-linux;
-    #     extraSpecialArgs = {
-    #       inherit inputs outputs;
-    #     };
-    #   };
-    #
-    #   # Media server 
-    #   "sanfe@vanaheim" = lib.homeManagerConfiguration {
-    #     modules = [./home/sanfe/vanaheim.nix ./home/sanfe/nixpkgs.nix];
-    #     pkgs = pkgsFor.aarch64-linux;
-    #     extraSpecialArgs = {
-    #       inherit inputs outputs;
-    #     };
-    #   };
+      #
+      #   # Build and game server (Oracle)
+      #   "sanfe@nidavellir" = lib.homeManagerConfiguration {
+      #     modules = [./home/sanfe/nidavellir.nix ./home/sanfe/nixpkgs.nix];
+      #     pkgs = pkgsFor.aarch64-linux;
+      #     extraSpecialArgs = {
+      #       inherit inputs outputs;
+      #     };
+      #   };
+      #
+      #   # Media server
+      #   "sanfe@vanaheim" = lib.homeManagerConfiguration {
+      #     modules = [./home/sanfe/vanaheim.nix ./home/sanfe/nixpkgs.nix];
+      #     pkgs = pkgsFor.aarch64-linux;
+      #     extraSpecialArgs = {
+      #       inherit inputs outputs;
+      #     };
+      #   };
     };
   };
 }
