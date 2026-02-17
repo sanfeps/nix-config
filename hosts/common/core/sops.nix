@@ -7,10 +7,10 @@
   getKeyPath = k: k.path;
   keys = builtins.filter isEd25519 config.services.openssh.hostKeys;
 in {
-  imports = [inputs.sops-nix.nixosModules.sops];
+  #imports = [inputs.sops-nix.nixosModules.sops];
 
-  sops = {
+  #sops = {
     # automatically import host SSH keys as age keys
-    age.sshKeyPaths = map getKeyPath keys;
-  };
+   # age.sshKeyPaths = map getKeyPath keys;
+  #};
 }

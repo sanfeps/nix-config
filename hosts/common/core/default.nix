@@ -12,6 +12,7 @@
       ./locale.nix
       ./nix.nix
       ./openssh.nix
+      ./rpcbind.nix
       # ./podman.nix
       ./sops.nix
       ./zsh.nix
@@ -52,9 +53,13 @@
 
   # System packages
   environment.systemPackages = with pkgs; [
-
     git
     vim
+  ];
 
+  # Habilitar reglas udev para hardware de desarrollo
+  services.udev.packages = with pkgs; [
+    platformio-core
+    openocd
   ];
 }
