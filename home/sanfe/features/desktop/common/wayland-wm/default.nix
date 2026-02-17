@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  config,
+  ...
+}: {
   imports = [
     ./alacritty.nix
     ./wofi.nix
@@ -7,7 +11,8 @@
   ];
 
   home.packages = with pkgs; [
-	librewolf
+    librewolf
+    remmina
   ];
 
   home.sessionVariables = {
@@ -16,5 +21,14 @@
     LIBSEAT_BACKEND = "logind";
   };
 
-  xdg.portal.extraPortals = [pkgs.xdg-desktop-portal-wlr];
+  home.persistence = {
+    "/persist" = {
+      directories = [
+        ".librewolf"
+        ".mozilla"
+        ".config/remmina"
+        ".local/share/remmina"
+      ];
+    };
+  };
 }

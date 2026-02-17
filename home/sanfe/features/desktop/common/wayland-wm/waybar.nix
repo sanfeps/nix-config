@@ -5,8 +5,7 @@
   pkgs,
   inputs,
   ...
-}: 
-{
+}: {
   systemd.user.services.waybar = {
     Unit = {
       # Let it try to start a few more times
