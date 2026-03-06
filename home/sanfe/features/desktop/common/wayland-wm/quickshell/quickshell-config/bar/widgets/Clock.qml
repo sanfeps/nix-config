@@ -1,67 +1,64 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import "../.." as Root
+import "../../.." as Root
 
 Item {
     id: root
-    implicitWidth: 60
-    implicitHeight: 24
+    implicitHeight: Root.Theme.barHeight
 
-    Rectangle {
-        id: clockBox
-        width: 60
-        height: 24
+    property bool hovered: mouseArea.containsMouse
+
+    SystemClock {
+        id: clock
+        precision: SystemClock.Minutes
+    }
+
+    function pad(n: int): string {
+        return n < 10 ? "0" + n : "" + n
+    }
+
+    function timeStr(): string {
+        return pad(clock.hours) + ":" + pad(clock.minutes)
+    }
+
+    function dateStr(): string {
+        var d = new Date()
+        var days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+        var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        return days[d.getDay()] + " " + d.getDate() + " " + months[d.getMonth()]
+    }
+
+    Column {
         anchors.centerIn: parent
-        color: Qt.rgba(Root.Globals.backgroundAlt.r, Root.Globals.backgroundAlt.g, Root.Globals.backgroundAlt.b, 0.6)
-        radius: Root.Globals.radiusLarge
+        spacing: 1
 
-        RowLayout {
-            id: clockLayout
-            anchors.centerIn: parent
-            spacing: 2
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: timeStr()
+            font.family:    Root.Theme.fontFamily
+            font.pixelSize: Root.Theme.fontSizeLg
+            font.weight:    Font.Medium
+            color: Root.Colors.onSurface
+        }
 
-            Text {
-                id: hourText
-                text: "00"
-                font.family: Root.Globals.font
-                font.pixelSize: 13
-                font.weight: Font.Medium
-                color: Root.Globals.textColor
-            }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: dateStr()
+            font.family:    Root.Theme.fontFamily
+            font.pixelSize: Root.Theme.fontSizeXs
+            color: Root.Colors.onSurfaceVariant
+            opacity: root.hovered ? 1.0 : 0.0
 
-            Text {
-                text: ":"
-                font.family: Root.Globals.font
-                font.pixelSize: 13
-                color: Root.Globals.textAlt
-            }
-
-            Text {
-                id: minuteText
-                text: "00"
-                font.family: Root.Globals.font
-                font.pixelSize: 13
-                color: Root.Globals.textColor
+            Behavior on opacity {
+                NumberAnimation { duration: Root.Theme.animFast }
             }
         }
     }
 
-    Timer {
-        interval: 1000
-        running: true
-        repeat: true
-        onTriggered: updateTime()
-    }
-
-    Component.onCompleted: updateTime()
-
-    function updateTime() {
-        var now = new Date();
-        var hours = now.getHours();
-        var minutes = now.getMinutes();
-
-        hourText.text = hours.toString().padStart(2, '0');
-        minuteText.text = minutes.toString().padStart(2, '0');
+    MouseArea {
+        id: mouseArea
+        anchors.fill: parent
+        hoverEnabled: true
     }
 }

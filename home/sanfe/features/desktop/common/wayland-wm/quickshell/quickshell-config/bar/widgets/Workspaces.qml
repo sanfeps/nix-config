@@ -1,87 +1,65 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Hyprland
-import "../.." as Root
+import "../../.." as Root
 
 Item {
     id: root
-    implicitWidth: workspaceBox.width
-    implicitHeight: 24
+    implicitWidth: row.width + Root.Theme.spacingMd * 2
+    implicitHeight: Root.Theme.barHeight
 
-    Rectangle {
-        id: workspaceBox
-        width: workspaceRow.width + 16
-        height: 24
-        anchors.verticalCenter: parent.verticalCenter
-        color: Qt.rgba(Root.Globals.backgroundAlt.r, Root.Globals.backgroundAlt.g, Root.Globals.backgroundAlt.b, 0.6)
-        radius: Root.Globals.radiusLarge
+    Row {
+        id: row
+        anchors.centerIn: parent
+        spacing: 5
 
-        Row {
-            id: workspaceRow
-            anchors.centerIn: parent
-            spacing: 8
+        Repeater {
+            model: 9
 
-            Repeater {
-                model: 9
+            Item {
+                id: wsItem
+                required property int index
+                property int wsId: index + 1
+
+                property bool isActive: Root.CompositorService.activeWorkspace === wsId
+                property bool hasWindows: {
+                    var wsList = Root.CompositorService.workspaces
+                    for (var i = 0; i < wsList.length; i++) {
+                        if (wsList[i].id === wsId && wsList[i].windows > 0)
+                            return true
+                    }
+                    return false
+                }
+
+                width:  isActive ? 28 : (hasWindows ? 10 : 6)
+                height: 6
+
+                Behavior on width {
+                    NumberAnimation { duration: Root.Theme.animFast; easing.type: Easing.OutCubic }
+                }
 
                 Rectangle {
-                    id: workspaceIndicator
-                    required property int index
-                    property int workspaceId: index + 1
+                    anchors.fill: parent
+                    radius: Root.Theme.radiusFull
 
-                    property bool isActive: {
-                        if (!Hyprland.focusedWorkspace) return false
-                        return Hyprland.focusedWorkspace.name === workspaceId.toString()
-                    }
+                    color: wsItem.isActive
+                        ? Root.Colors.primary
+                        : wsItem.hasWindows
+                            ? Root.Colors.surfaceVariant
+                            : "transparent"
 
-                    property bool hasWindows: {
-                        if (!Hyprland.workspaces) return false
-                        var workspacesList = Hyprland.workspaces.values
-                        for (var i = 0; i < workspacesList.length; i++) {
-                            var ws = workspacesList[i]
-                            if (ws.name === workspaceId.toString() && ws.windows && ws.windows.length > 0) {
-                                return true
-                            }
-                        }
-                        return false
-                    }
-
-                    width: isActive ? 36 : (hasWindows ? 12 : 8)
-                    height: 6
-                    radius: 3
-
-                    color: {
-                        if (isActive) return Root.Globals.accentColor
-                        if (hasWindows) return Root.Globals.surfaceColor
-                        return "transparent"
-                    }
-
-                    border.width: !isActive && !hasWindows ? 1 : 0
-                    border.color: Root.Globals.overlayColor
-
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: Root.Globals.animationDuration
-                            easing.type: Easing.OutCubic
-                        }
-                    }
+                    border.width: (!wsItem.isActive && !wsItem.hasWindows) ? 1 : 0
+                    border.color: Root.Colors.outline
 
                     Behavior on color {
-                        ColorAnimation { duration: Root.Globals.animationDuration }
+                        ColorAnimation { duration: Root.Theme.animFast }
                     }
+                }
 
-                    // No text - just indicator bars like thorn
-
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-
-                        onClicked: {
-                            Hyprland.dispatch("workspace name:" + workspaceId.toString())
-                        }
-                    }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked:   Root.CompositorService.switchWorkspace(wsItem.wsId)
                 }
             }
         }

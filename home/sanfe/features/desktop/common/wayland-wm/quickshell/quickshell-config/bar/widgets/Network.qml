@@ -7,12 +7,10 @@ Item {
     implicitHeight: Root.Theme.barHeight
     implicitWidth: row.width + Root.Theme.spacingMd * 2
 
-    property bool showPanel: false
-
     Rectangle {
         anchors.fill: parent
         radius: Root.Theme.radiusMd
-        color: mouseArea.containsMouse
+        color: hoverArea.containsMouse
             ? Qt.rgba(Root.Colors.onSurface.r, Root.Colors.onSurface.g, Root.Colors.onSurface.b, Root.Theme.opacityHover)
             : "transparent"
         Behavior on color { ColorAnimation { duration: Root.Theme.animFast } }
@@ -23,37 +21,29 @@ Item {
             spacing: Root.Theme.spacingXs
 
             Text {
-                text: Root.AudioService.volumeIcon()
+                text: Root.NetworkService.icon()
                 font.family:    "Material Symbols Rounded"
                 font.pixelSize: Root.Theme.iconMd
-                color: Root.AudioService.muted ? Root.Colors.error : Root.Colors.onSurface
+                color: Root.NetworkService.connected ? Root.Colors.onSurface : Root.Colors.onSurfaceVariant
             }
 
             Text {
-                text: Math.round(Root.AudioService.volume * 100) + "%"
+                text: {
+                    var s = Root.NetworkService.ssid
+                    return s.length > 14 ? s.substring(0, 14) + "…" : s
+                }
                 font.family:    Root.Theme.fontFamily
                 font.pixelSize: Root.Theme.fontSizeSm
                 color: Root.Colors.onSurfaceVariant
-                visible: !Root.AudioService.muted
+                visible: Root.NetworkService.connected && Root.NetworkService.ssid !== ""
             }
         }
 
         MouseArea {
-            id: mouseArea
+            id: hoverArea
             anchors.fill: parent
             hoverEnabled: true
-            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-
-            onClicked: mouse => {
-                if (mouse.button === Qt.MiddleButton)
-                    Root.AudioService.toggleMute()
-                else if (mouse.button === Qt.LeftButton)
-                    root.showPanel = !root.showPanel
-            }
-            onWheel: wheel => {
-                if (wheel.angleDelta.y > 0) Root.AudioService.volumeUp()
-                else                        Root.AudioService.volumeDown()
-            }
+            cursorShape: Qt.PointingHandCursor
         }
     }
 }
