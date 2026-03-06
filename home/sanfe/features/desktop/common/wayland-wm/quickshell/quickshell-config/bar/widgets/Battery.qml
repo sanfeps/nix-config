@@ -38,12 +38,7 @@ Item {
             }
         }
 
-        ToolTip.visible: hoverArea.containsMouse
-        ToolTip.text:    Root.BatteryService.status + " · " + Root.BatteryService.capacity + "%"
-        ToolTip.delay:   500
-
         MouseArea {
-            id: hoverArea
             anchors.fill: parent
             hoverEnabled: true
         }

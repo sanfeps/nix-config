@@ -18,12 +18,7 @@ Item {
         Behavior on opacity { NumberAnimation { duration: Root.Theme.animNormal } }
     }
 
-    ToolTip.visible: hoverArea.containsMouse
-    ToolTip.text:    Root.VpnService.active ? "VPN connected" : "VPN disconnected"
-    ToolTip.delay:   500
-
     MouseArea {
-        id: hoverArea
         anchors.fill: parent
         hoverEnabled: true
     }
