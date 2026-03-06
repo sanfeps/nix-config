@@ -82,10 +82,7 @@
     nixosConfigurations = {
       # Main desktop
       midgard = lib.nixosSystem {
-        modules = [
-          ./hosts/midgard
-          inputs.stylix.nixosModules.stylix
-        ];
+        modules = [./hosts/midgard];
         specialArgs = {
           inherit inputs outputs;
         };

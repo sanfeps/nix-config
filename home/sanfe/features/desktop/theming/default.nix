@@ -100,6 +100,8 @@
     '';
   };
 in {
+  imports = [inputs.stylix.homeManagerModules.stylix];
+
   home.packages = with pkgs; [
     matugen
     swww
