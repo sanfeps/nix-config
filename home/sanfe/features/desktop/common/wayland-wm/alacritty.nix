@@ -7,8 +7,7 @@
     enable = true;
 
     settings = {
-      # Import matugen-generated colors (fallback written by home.activation)
-      import = [
+      general.import = [
         "${config.home.homeDirectory}/.local/state/quickshell/user/generated/alacritty-colors.toml"
       ];
 
