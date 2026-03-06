@@ -100,7 +100,7 @@
     '';
   };
 in {
-  imports = [inputs.stylix.homeManagerModules.stylix];
+  imports = [inputs.stylix.homeModules.stylix];
 
   home.packages = with pkgs; [
     matugen
@@ -137,7 +137,6 @@ in {
       name = "catppuccin-mocha-blue-cursors";
       size = 24;
     };
-    targets.fonts.enable = true;
     targets.gtk.enable = false;
   };
 
