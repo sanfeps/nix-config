@@ -5,7 +5,7 @@ import Quickshell.Services.Mpris
 QtObject {
     id: root
 
-    property MprisPlayer player: null
+    property var player: null
     property bool hasPlayer: player !== null && player.isValid
 
     property string trackTitle:  hasPlayer ? (player.trackTitle  || "") : ""
@@ -17,12 +17,15 @@ QtObject {
     property bool   canNext:     hasPlayer ? player.canGoNext  : false
     property bool   canPrev:     hasPlayer ? player.canGoPrevious : false
 
-    property MprisController _controller: MprisController {
-        onPlayersChanged: root._updatePlayer()
+    Connections {
+        target: Mpris
+        function onPlayersChanged() { root._updatePlayer() }
     }
 
+    Component.onCompleted: root._updatePlayer()
+
     function _updatePlayer() {
-        var players = _controller.players
+        var players = Mpris.players
         if (!players || players.length === 0) {
             root.player = null
             return
