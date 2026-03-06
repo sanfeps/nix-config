@@ -85,6 +85,8 @@
     dconf.enable = true;
   };
 
+  security.pam.services.qs-lock = {};
+
   programs.steam.enable = true;
   
   hardware.graphics.enable = true;

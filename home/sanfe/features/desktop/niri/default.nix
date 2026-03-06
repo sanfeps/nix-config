@@ -8,7 +8,7 @@
     ../common/wayland-wm
   ];
 
-  home.packages = [pkgs.niri];
+  home.packages = [pkgs.niri pkgs.swww];
 
   xdg.portal = {
     extraPortals = [pkgs.xdg-desktop-portal-gtk];

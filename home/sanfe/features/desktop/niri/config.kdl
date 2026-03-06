@@ -1,5 +1,7 @@
 prefer-no-csd
 
+spawn-at-startup "swww-daemon"
+
 input {
     keyboard {
         xkb {
@@ -19,6 +21,7 @@ binds {
     Mod+D { spawn "wofi" "--show" "drun"; }
     Mod+Q { close-window; }
     Mod+Shift+E { quit; }
+    Mod+Shift+L { spawn "loginctl" "lock-session"; }
 
     Mod+1 { focus-workspace 1; }
     Mod+2 { focus-workspace 2; }

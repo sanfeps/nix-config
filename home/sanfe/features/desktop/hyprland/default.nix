@@ -2,19 +2,8 @@
   lib,
   config,
   pkgs,
-  outputs,
   ...
-}: let
-  getHostname = x: lib.last (lib.splitString "@" x);
-  remoteColorschemes =
-    lib.mapAttrs' (n: v: {
-      name = getHostname n;
-      value = v.config.colorscheme.rawColorscheme.colors.${config.colorscheme.mode};
-    })
-    outputs.homeConfigurations;
-  rgb = color: "rgb(${lib.removePrefix "#" color})";
-  rgba = color: alpha: "rgba(${lib.removePrefix "#" color}${alpha})";
-in {
+}: {
   imports = [
     ../common
     ../common/wayland-wm
@@ -32,6 +21,7 @@ in {
   home.packages = with pkgs; [
     grimblast
     hyprpicker
+    swww
   ];
 
   wayland.windowManager.hyprland = {
@@ -98,13 +88,6 @@ in {
         "animation fade,hyprpicker"
         "animation fade,selection"
 
-        "animation fade,waybar"
-        "blur,waybar"
-        "ignorezero,waybar"
-
-        "blur,notifications"
-        "ignorezero,notifications"
-
         "blur,wofi"
         "ignorezero,wofi"
 
@@ -114,6 +97,14 @@ in {
         "blur,quickshell:bar"
         "ignorezero,quickshell:bar"
         "animation fade,quickshell:bar"
+
+        "blur,quickshell:notification"
+        "ignorezero,quickshell:notification"
+        "animation fade,quickshell:notification"
+
+        "blur,quickshell:osd"
+        "ignorezero,quickshell:osd"
+        "animation fade,quickshell:osd"
       ];
 
       decoration = {
@@ -168,6 +159,10 @@ in {
           "workspaces,1,2.6,easeoutback,slide"
         ];
       };
+
+      exec-once = [
+        "${lib.getExe' pkgs.swww "swww-daemon"}"
+      ];
 
       exec = [
       ];

@@ -31,9 +31,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    noctalia = {
-	url = "github:noctalia-dev/noctalia-shell";
-	inputs.nixpkgs.follows = "nixpkgs";
+    stylix = {
+      url = "github:nix-community/stylix";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # nix-gaming = {
@@ -82,7 +82,10 @@
     nixosConfigurations = {
       # Main desktop
       midgard = lib.nixosSystem {
-        modules = [./hosts/midgard];
+        modules = [
+          ./hosts/midgard
+          inputs.stylix.nixosModules.stylix
+        ];
         specialArgs = {
           inherit inputs outputs;
         };
@@ -102,6 +105,7 @@
           inherit inputs outputs;
         };
       };
+
       # # Build and game server (Oracle)
       # nidavellir = lib.nixosSystem {
       #   modules = [./hosts/nidavellir];

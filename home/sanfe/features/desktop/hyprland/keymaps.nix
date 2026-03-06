@@ -45,6 +45,7 @@
       [
         "SUPERSHIFT,q,killactive"
         "SUPERSHIFT,e,exit"
+        "SUPERSHIFT,l,exec,loginctl lock-session"
 
         "SUPER,s,togglesplit"
         "SUPER,f,fullscreen,1"

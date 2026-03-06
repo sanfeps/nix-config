@@ -3,6 +3,7 @@
     ./common/core
     ./features/desktop/hyprland
     ./features/desktop/niri
+    ./features/desktop/theming
     ./features/games
   ];
 
