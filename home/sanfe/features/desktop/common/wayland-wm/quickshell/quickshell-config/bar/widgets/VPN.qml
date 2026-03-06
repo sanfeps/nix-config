@@ -11,7 +11,7 @@ Item {
         text: "vpn_lock"
         font.family:    "Material Symbols Rounded"
         font.pixelSize: Root.Theme.iconMd
-        color: Root.VpnService.active ? Root.Colors.tertiary : Root.Colors.onSurfaceVariant
+        color: Root.VpnService.active ? Root.Colors.tertiary : Root.Colors.surfaceFgVariant
         opacity: Root.VpnService.active ? 1.0 : 0.5
 
         Behavior on color   { ColorAnimation  { duration: Root.Theme.animNormal } }

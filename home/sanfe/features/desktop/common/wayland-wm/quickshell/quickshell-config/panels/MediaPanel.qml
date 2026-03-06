@@ -43,7 +43,7 @@ Rectangle {
                 text: "music_note"
                 font.family:    "Material Symbols Rounded"
                 font.pixelSize: Root.Theme.iconXl
-                color: Root.Colors.onSurfaceVariant
+                color: Root.Colors.surfaceFgVariant
             }
         }
 
@@ -54,7 +54,7 @@ Rectangle {
             font.family:    Root.Theme.fontFamilyAlt
             font.pixelSize: Root.Theme.fontSizeMd
             font.weight:    Font.Medium
-            color: Root.Colors.onSurface
+            color: Root.Colors.surfaceFg
             elide: Text.ElideRight
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
@@ -65,7 +65,7 @@ Rectangle {
             text: Root.MediaService.trackArtist || ""
             font.family:    Root.Theme.fontFamily
             font.pixelSize: Root.Theme.fontSizeSm
-            color: Root.Colors.onSurfaceVariant
+            color: Root.Colors.surfaceFgVariant
             elide: Text.ElideRight
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
@@ -88,7 +88,7 @@ Rectangle {
                     text:              modelData.icon
                     font.family:       "Material Symbols Rounded"
                     font.pixelSize:    modelData.action === "play" ? Root.Theme.iconXl : Root.Theme.iconLg
-                    color:             modelData.action === "play" ? Root.Colors.primary : Root.Colors.onSurface
+                    color:             modelData.action === "play" ? Root.Colors.primary : Root.Colors.surfaceFg
 
                     MouseArea {
                         anchors.fill: parent

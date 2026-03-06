@@ -12,7 +12,7 @@ Item {
         anchors.fill: parent
         radius: Root.Theme.radiusMd
         color: mediaHover.containsMouse
-            ? Qt.rgba(Root.Colors.onSurface.r, Root.Colors.onSurface.g, Root.Colors.onSurface.b, Root.Theme.opacityHover)
+            ? Qt.rgba(Root.Colors.surfaceFg.r, Root.Colors.surfaceFg.g, Root.Colors.surfaceFg.b, Root.Theme.opacityHover)
             : "transparent"
         Behavior on color { ColorAnimation { duration: Root.Theme.animFast } }
 
@@ -26,7 +26,7 @@ Item {
                 text: "skip_previous"
                 font.family:    "Material Symbols Rounded"
                 font.pixelSize: Root.Theme.iconSm
-                color: Root.Colors.onSurfaceVariant
+                color: Root.Colors.surfaceFgVariant
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
@@ -52,7 +52,7 @@ Item {
                 text: "skip_next"
                 font.family:    "Material Symbols Rounded"
                 font.pixelSize: Root.Theme.iconSm
-                color: Root.Colors.onSurfaceVariant
+                color: Root.Colors.surfaceFgVariant
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
@@ -68,7 +68,7 @@ Item {
                 }
                 font.family:    Root.Theme.fontFamily
                 font.pixelSize: Root.Theme.fontSizeSm
-                color: Root.Colors.onSurface
+                color: Root.Colors.surfaceFg
                 visible: text !== ""
             }
         }

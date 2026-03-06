@@ -39,7 +39,7 @@ Item {
                 font.family:    Root.Theme.fontFamilyAlt
                 font.pixelSize: 72
                 font.weight:    Font.Light
-                color: Root.Colors.onSurface
+                color: Root.Colors.surfaceFg
             }
 
             Text {
@@ -52,7 +52,7 @@ Item {
                 }
                 font.family:    Root.Theme.fontFamily
                 font.pixelSize: Root.Theme.fontSizeLg
-                color: Root.Colors.onSurfaceVariant
+                color: Root.Colors.surfaceFgVariant
             }
         }
 
@@ -75,7 +75,7 @@ Item {
                     text: "lock"
                     font.family:    "Material Symbols Rounded"
                     font.pixelSize: Root.Theme.iconMd
-                    color: Root.Colors.onSurfaceVariant
+                    color: Root.Colors.surfaceFgVariant
                 }
 
                 TextInput {
@@ -84,7 +84,7 @@ Item {
                     echoMode:         TextInput.Password
                     font.family:      Root.Theme.fontFamilyMono
                     font.pixelSize:   Root.Theme.fontSizeMd
-                    color:            Root.Colors.onSurface
+                    color:            Root.Colors.surfaceFg
                     cursorVisible:    activeFocus
 
                     Keys.onReturnPressed: panel._tryUnlock()
@@ -102,7 +102,7 @@ Item {
                     text:           "backspace"
                     font.family:    "Material Symbols Rounded"
                     font.pixelSize: Root.Theme.iconSm
-                    color:          Root.Colors.onSurfaceVariant
+                    color:          Root.Colors.surfaceFgVariant
 
                     MouseArea {
                         anchors.fill: parent

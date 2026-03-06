@@ -26,7 +26,7 @@ Item {
                     if (Root.BatteryService.charging) return Root.Colors.tertiary
                     if (Root.BatteryService.capacity <= 15) return Root.Colors.error
                     if (Root.BatteryService.capacity <= 30) return Root.Colors.secondary
-                    return Root.Colors.onSurface
+                    return Root.Colors.surfaceFg
                 }
             }
 
@@ -34,7 +34,7 @@ Item {
                 text: Root.BatteryService.capacity + "%"
                 font.family:    Root.Theme.fontFamily
                 font.pixelSize: Root.Theme.fontSizeSm
-                color: Root.Colors.onSurfaceVariant
+                color: Root.Colors.surfaceFgVariant
             }
         }
 

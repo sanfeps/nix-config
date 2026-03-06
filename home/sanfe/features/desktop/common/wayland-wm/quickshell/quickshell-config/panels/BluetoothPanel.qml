@@ -22,7 +22,7 @@ Rectangle {
                 font.family:    Root.Theme.fontFamilyAlt
                 font.pixelSize: Root.Theme.fontSizeLg
                 font.weight:    Font.Medium
-                color: Root.Colors.onSurface
+                color: Root.Colors.surfaceFg
                 Layout.fillWidth: true
             }
 
@@ -38,7 +38,7 @@ Rectangle {
                     width:  18
                     height: 18
                     radius: Root.Theme.radiusFull
-                    color:  Root.BluetoothService.powered ? Root.Colors.onPrimary : Root.Colors.onSurfaceVariant
+                    color:  Root.BluetoothService.powered ? Root.Colors.primaryFg : Root.Colors.surfaceFgVariant
                     anchors.verticalCenter: parent.verticalCenter
                     x: Root.BluetoothService.powered ? parent.width - width - 3 : 3
                     Behavior on x { NumberAnimation { duration: Root.Theme.animFast; easing.type: Easing.OutCubic } }
@@ -69,7 +69,7 @@ Rectangle {
                 text: Root.BluetoothService.deviceName || "Connected device"
                 font.family:    Root.Theme.fontFamily
                 font.pixelSize: Root.Theme.fontSizeMd
-                color: Root.Colors.onSurface
+                color: Root.Colors.surfaceFg
             }
         }
     }

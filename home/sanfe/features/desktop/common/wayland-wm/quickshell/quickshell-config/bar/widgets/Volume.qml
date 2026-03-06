@@ -13,7 +13,7 @@ Item {
         anchors.fill: parent
         radius: Root.Theme.radiusMd
         color: mouseArea.containsMouse
-            ? Qt.rgba(Root.Colors.onSurface.r, Root.Colors.onSurface.g, Root.Colors.onSurface.b, Root.Theme.opacityHover)
+            ? Qt.rgba(Root.Colors.surfaceFg.r, Root.Colors.surfaceFg.g, Root.Colors.surfaceFg.b, Root.Theme.opacityHover)
             : "transparent"
         Behavior on color { ColorAnimation { duration: Root.Theme.animFast } }
 
@@ -26,14 +26,14 @@ Item {
                 text: Root.AudioService.volumeIcon()
                 font.family:    "Material Symbols Rounded"
                 font.pixelSize: Root.Theme.iconMd
-                color: Root.AudioService.muted ? Root.Colors.error : Root.Colors.onSurface
+                color: Root.AudioService.muted ? Root.Colors.error : Root.Colors.surfaceFg
             }
 
             Text {
                 text: Math.round(Root.AudioService.volume * 100) + "%"
                 font.family:    Root.Theme.fontFamily
                 font.pixelSize: Root.Theme.fontSizeSm
-                color: Root.Colors.onSurfaceVariant
+                color: Root.Colors.surfaceFgVariant
                 visible: !Root.AudioService.muted
             }
         }

@@ -39,7 +39,7 @@ Item {
             font.family:    Root.Theme.fontFamily
             font.pixelSize: Root.Theme.fontSizeLg
             font.weight:    Font.Medium
-            color: Root.Colors.onSurface
+            color: Root.Colors.surfaceFg
         }
 
         Text {
@@ -47,7 +47,7 @@ Item {
             text: dateStr()
             font.family:    Root.Theme.fontFamily
             font.pixelSize: Root.Theme.fontSizeXs
-            color: Root.Colors.onSurfaceVariant
+            color: Root.Colors.surfaceFgVariant
             opacity: root.hovered ? 1.0 : 0.0
 
             Behavior on opacity {

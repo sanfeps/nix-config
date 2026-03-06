@@ -96,7 +96,7 @@ Scope {
                     text: Math.round(osdWindow.osdValue * 100) + "%"
                     font.family:    Root.Theme.fontFamily
                     font.pixelSize: Root.Theme.fontSizeSm
-                    color: Root.Colors.onSurface
+                    color: Root.Colors.surfaceFg
                     Layout.minimumWidth: 36
                 }
             }

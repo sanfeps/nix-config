@@ -25,7 +25,7 @@ Rectangle {
             font.family:    Root.Theme.fontFamilyAlt
             font.pixelSize: Root.Theme.fontSizeLg
             font.weight:    Font.Medium
-            color: Root.Colors.onSurface
+            color: Root.Colors.surfaceFg
             leftPadding: Root.Theme.spacingMd
         }
 
@@ -78,7 +78,7 @@ Rectangle {
                 text: Math.round(Root.AudioService.volume * 100) + "%"
                 font.family:    Root.Theme.fontFamily
                 font.pixelSize: Root.Theme.fontSizeSm
-                color: Root.Colors.onSurfaceVariant
+                color: Root.Colors.surfaceFgVariant
                 Layout.minimumWidth: 36
             }
         }

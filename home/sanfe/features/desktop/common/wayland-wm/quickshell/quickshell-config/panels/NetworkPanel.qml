@@ -18,7 +18,7 @@ Rectangle {
             font.family:    Root.Theme.fontFamilyAlt
             font.pixelSize: Root.Theme.fontSizeLg
             font.weight:    Font.Medium
-            color: Root.Colors.onSurface
+            color: Root.Colors.surfaceFg
             leftPadding: Root.Theme.spacingMd
         }
 
@@ -31,7 +31,7 @@ Rectangle {
                 text: Root.NetworkService.icon()
                 font.family:    "Material Symbols Rounded"
                 font.pixelSize: Root.Theme.iconLg
-                color: Root.NetworkService.connected ? Root.Colors.primary : Root.Colors.onSurfaceVariant
+                color: Root.NetworkService.connected ? Root.Colors.primary : Root.Colors.surfaceFgVariant
             }
 
             Column {
@@ -42,7 +42,7 @@ Rectangle {
                     text: Root.NetworkService.connected ? (Root.NetworkService.ssid || "Connected") : "Disconnected"
                     font.family:    Root.Theme.fontFamily
                     font.pixelSize: Root.Theme.fontSizeMd
-                    color: Root.Colors.onSurface
+                    color: Root.Colors.surfaceFg
                 }
 
                 Text {
@@ -50,7 +50,7 @@ Rectangle {
                     text: "Signal: " + Root.NetworkService.strength + "%"
                     font.family:    Root.Theme.fontFamily
                     font.pixelSize: Root.Theme.fontSizeXs
-                    color: Root.Colors.onSurfaceVariant
+                    color: Root.Colors.surfaceFgVariant
                 }
             }
         }

@@ -140,7 +140,7 @@ Scope {
                     text: "notifications"
                     font.family:    "Material Symbols Rounded"
                     font.pixelSize: Root.Theme.iconMd
-                    color: Root.Colors.onPrimaryContainer
+                    color: Root.Colors.primaryFgContainer
                 }
             }
 
@@ -153,7 +153,7 @@ Scope {
                     text: card.notification ? (card.notification.appName || "") : ""
                     font.family:    Root.Theme.fontFamily
                     font.pixelSize: Root.Theme.fontSizeXs
-                    color: Root.Colors.onSurfaceVariant
+                    color: Root.Colors.surfaceFgVariant
                 }
 
                 Text {
@@ -161,7 +161,7 @@ Scope {
                     font.family:    Root.Theme.fontFamily
                     font.pixelSize: Root.Theme.fontSizeSm
                     font.weight:    Font.Medium
-                    color: Root.Colors.onSurface
+                    color: Root.Colors.surfaceFg
                     elide: Text.ElideRight
                     width: parent.width
                 }
@@ -171,7 +171,7 @@ Scope {
                     text: card.notification ? (card.notification.body || "") : ""
                     font.family:    Root.Theme.fontFamily
                     font.pixelSize: Root.Theme.fontSizeXs
-                    color: Root.Colors.onSurfaceVariant
+                    color: Root.Colors.surfaceFgVariant
                     elide: Text.ElideRight
                     maximumLineCount: 2
                     wrapMode: Text.WordWrap
@@ -184,7 +184,7 @@ Scope {
                 text: "close"
                 font.family:    "Material Symbols Rounded"
                 font.pixelSize: Root.Theme.iconSm
-                color: Root.Colors.onSurfaceVariant
+                color: Root.Colors.surfaceFgVariant
                 Layout.alignment: Qt.AlignTop
 
                 MouseArea {

@@ -10,7 +10,7 @@ Item {
         anchors.fill: parent
         radius: Root.Theme.radiusMd
         color: hoverArea.containsMouse
-            ? Qt.rgba(Root.Colors.onSurface.r, Root.Colors.onSurface.g, Root.Colors.onSurface.b, Root.Theme.opacityHover)
+            ? Qt.rgba(Root.Colors.surfaceFg.r, Root.Colors.surfaceFg.g, Root.Colors.surfaceFg.b, Root.Theme.opacityHover)
             : "transparent"
         Behavior on color { ColorAnimation { duration: Root.Theme.animFast } }
 
@@ -22,8 +22,8 @@ Item {
             color: Root.BluetoothService.connected
                 ? Root.Colors.primary
                 : Root.BluetoothService.powered
-                    ? Root.Colors.onSurface
-                    : Root.Colors.onSurfaceVariant
+                    ? Root.Colors.surfaceFg
+                    : Root.Colors.surfaceFgVariant
         }
 
         MouseArea {
