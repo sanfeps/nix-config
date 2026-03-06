@@ -16,7 +16,7 @@ in {
     # Fonts for shell theme
     nerd-fonts.fira-mono
     rubik
-    readex-pro
+    readexpro
     material-symbols
   ];
 
