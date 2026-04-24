@@ -6,25 +6,15 @@ import ".." as Root
 Scope {
     id: lockScope
 
-    SessionLock {
+    WlSessionLock {
         id: sessionLock
 
-        // Create a surface (panel) on every screen when locked
-        Variants {
-            model: sessionLock.locked ? Quickshell.screens : null
+        WlSessionLockSurface {
+            LockBackground { anchors.fill: parent }
 
-            SessionLockSurface {
-                id: surface
-                required property ShellScreen modelData
-                screen: modelData
-
-                // Full-screen lock surface
-                LockBackground { anchors.fill: parent }
-
-                LockPanel {
-                    anchors.centerIn: parent
-                    onUnlockSuccess: sessionLock.unlock()
-                }
+            LockPanel {
+                anchors.centerIn: parent
+                onUnlockSuccess: sessionLock.unlock()
             }
         }
     }

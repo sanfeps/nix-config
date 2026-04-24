@@ -17,12 +17,10 @@ QtObject {
     property bool   canNext:     hasPlayer ? player.canGoNext  : false
     property bool   canPrev:     hasPlayer ? player.canGoPrevious : false
 
-    Connections {
-        target: Mpris
-        function onPlayersChanged() { root._updatePlayer() }
+    Component.onCompleted: {
+        Mpris.playersChanged.connect(root._updatePlayer)
+        root._updatePlayer()
     }
-
-    Component.onCompleted: root._updatePlayer()
 
     function _updatePlayer() {
         var players = Mpris.players

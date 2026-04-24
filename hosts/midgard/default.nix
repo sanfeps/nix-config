@@ -20,7 +20,7 @@
     (import ../common/disks/btrfs-luks-impermanence-disk.nix {
       lib = lib;
       config = config;
-      device = "/dev/sda";
+      device = "/dev/nvme0n1";
     })
 
     #
@@ -42,6 +42,7 @@
     mesa
     (mesa.drivers or mesa)
     nodejs
+    nvidia-vaapi-driver
   ];
 
   networking = {
@@ -56,20 +57,11 @@
   };
   boot.initrd = {
     systemd.enable = true;
-    # This mostly mirrors what is generated on qemu from nixos-generate-config in hardware-configuration.nix
     kernelModules = [
-      "xhci_pci"
-      "ohci_pci"
-      "ehci_pci"
-      "virtio_pci"
-      "ahci"
-      "usbhid"
-      "sr_mod"
-      "virtio_blk"
-      #   "nvidia"
-      #   "i915"
-      #   "nvidia_modeset"
-      #   "nvidia_drm"
+      "nvidia"
+      "nvidia_modeset"
+      "nvidia_uvm"
+      "nvidia_drm"
     ];
   };
 
@@ -91,25 +83,13 @@
   
   hardware.graphics.enable = true;
 
-  #services.xserver = {
-  # enable = true;
-  # videoDrivers = [ "nvidia" ];
-  #};
-  # hardware.nvidia.open = true;
-  # hardware = {
-  # nvidia = {
-  #    modesetting.enable = true;
-  #   powerManagement.enable = true;
+  services.xserver.videoDrivers = ["nvidia"];
 
-  #  prime = {
-
-  #	offload.enable = true;
-  #        intelBusId = "PCI:0:2:0";
-  #        nvidiaBusId = "PCI:2:0:0";
-  #      };
-  # Usa el driver estable (puedes cambiarlo a legacy_390 si es necesario)
-  #     package = config.boot.kernelPackages.nvidiaPackages.stable;
-  #  };
-  #};
+  hardware.nvidia = {
+    modesetting.enable = true;
+    open = true;
+    powerManagement.enable = true;
+    package = config.boot.kernelPackages.nvidiaPackages.stable;
+  };
   system.stateVersion = "24.11";
 }

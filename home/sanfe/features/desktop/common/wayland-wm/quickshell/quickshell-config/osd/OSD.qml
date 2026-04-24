@@ -16,7 +16,7 @@ Scope {
         WlrLayershell.layer:     WlrLayer.Overlay
 
         color:   "transparent"
-        visible: osdVisible
+        visible: _showing
 
         implicitWidth:  240
         implicitHeight: 60
@@ -29,13 +29,13 @@ Scope {
             right:  false
         }
 
+        property bool _showing:   false
         property bool osdVisible: false
         property string osdType:  "volume"   // "volume" | "brightness"
         property real   osdValue: 0.0        // 0.0–1.0
 
-        opacity: osdVisible ? 1.0 : 0.0
-        Behavior on opacity {
-            NumberAnimation { duration: Root.Theme.animFast }
+        onOsdVisibleChanged: {
+            if (osdVisible) _showing = true
         }
 
         Timer {
@@ -62,6 +62,14 @@ Scope {
             )
             border.color: Root.Colors.outlineVariant
             border.width: 1
+
+            opacity: osdWindow.osdVisible ? 1.0 : 0.0
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Root.Theme.animFast
+                    onFinished: { if (!osdWindow.osdVisible) osdWindow._showing = false }
+                }
+            }
 
             RowLayout {
                 anchors { fill: parent; margins: Root.Theme.spacingMd }
@@ -103,8 +111,6 @@ Scope {
         }
     }
 
-    // Listen for volume changes via PulseAudio DBus property changes
-    // (AudioService polls every 2s; OSD also watches for rapid changes)
     Connections {
         target: Root.AudioService
         function onVolumeChanged() {

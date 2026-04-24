@@ -145,22 +145,21 @@ Item {
     Process {
         id: pamProcess
         command: ["qs-pam-auth", Quickshell.env("USER") || "sanfe"]
-        stdin: StdinWriter { id: pamStdin }
-        onRunningChanged: {
-            if (running) {
-                // Write password and close stdin immediately after process starts
-                pamStdin.write(panel._password + "\n")
-                pamStdin.close()
+        stdinEnabled: true
+
+        onStarted: {
+            pamProcess.write(panel._password + "\n")
+        }
+
+        onExited: function(exitCode, exitStatus) {
+            panel._checking = false
+            if (exitCode === 0) {
+                panel._clearInput()
+                panel.unlockSuccess()
             } else {
-                panel._checking = false
-                if (exitCode === 0) {
-                    panel._clearInput()
-                    panel.unlockSuccess()
-                } else {
-                    panel._errorMsg = "Incorrect password"
-                    panel._clearInput()
-                    passwordInput.forceActiveFocus()
-                }
+                panel._errorMsg = "Incorrect password"
+                panel._clearInput()
+                passwordInput.forceActiveFocus()
             }
         }
     }

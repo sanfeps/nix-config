@@ -7,14 +7,18 @@
     ./features/games
   ];
 
-  #  ------   -----   ------
-  # | DP-3 | | DP-1| | DP-2 |
-  #  ------   -----   ------
+  home.sessionVariables = {
+    LIBVA_DRIVER_NAME = "nvidia";
+    __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+    NVD_BACKEND = "direct";
+  };
+
   monitors = [
     {
       name = "DP-1";
-      width = 2560;
+      width = 5120;
       height = 1440;
+      refreshRate = 240;
       workspace = "1";
       primary = true;
     }

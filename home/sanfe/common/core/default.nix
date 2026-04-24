@@ -92,6 +92,7 @@
         files = [
           ".npmrc"
           ".claude.json"
+          ".zsh_history"
         ];
       };
     };
@@ -101,18 +102,4 @@
     wireguard-tools
   ];
 
-  home.file.".config/wireguard/wg0.conf" = {
-    text = ''
-      [Interface]
-      PrivateKey = oFQE1ZVn9idpOZnqu+/+f+C7RRjKVkB/Hs/ICH1yEVQ=
-      Address = 10.10.0.2/24
-
-      [Peer]
-      PublicKey = +wNa7J01GK/KQiTZ8i+BuXy117j1tAy6CN7ltGPBkyY=
-      Endpoint = headscale.valgrindr.net:51820
-      AllowedIPs = 10.10.0.0/24,192.168.1.0/24
-      PersistentKeepalive = 25
-    '';
-    target = ".config/wireguard/wg0.conf";
-  };
 }

@@ -82,8 +82,8 @@
       # Move focus
       (lib.mapAttrsToList (key: direction: "SUPER,${key},movefocus,${direction}") directions)
       ++
-      # Swap windows
-      (lib.mapAttrsToList (key: direction: "SUPERSHIFT,${key},swapwindow,${direction}") directions)
+      # Swap windows (exclude 'l' — conflicts with SUPERSHIFT+L lock-session; arrow key still works)
+      (lib.mapAttrsToList (key: direction: "SUPERSHIFT,${key},swapwindow,${direction}") (builtins.removeAttrs directions ["l"]))
       ++
       # Move windows
       (lib.mapAttrsToList (

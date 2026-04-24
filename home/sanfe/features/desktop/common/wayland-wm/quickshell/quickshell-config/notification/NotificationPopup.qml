@@ -25,6 +25,8 @@ Scope {
 
             WlrLayershell.namespace: "quickshell:notification"
             WlrLayershell.layer:     WlrLayer.Overlay
+            WlrLayershell.margins.top:   Root.Theme.barHeight + Root.Theme.spacingMd
+            WlrLayershell.margins.right: Root.Theme.spacingMd
 
             color: "transparent"
             implicitWidth:  360
@@ -34,9 +36,6 @@ Scope {
                 top:   true
                 right: true
             }
-
-            topMargin:   Root.Theme.barHeight + Root.Theme.spacingMd
-            rightMargin: Root.Theme.spacingMd
 
             Column {
                 id: notifColumn
