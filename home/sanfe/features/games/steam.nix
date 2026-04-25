@@ -59,6 +59,7 @@ in {
       directories = [
         ".local/share/Steam"
         ".steam"
+        ".cache/nvidia"
       ];
     };
   };
