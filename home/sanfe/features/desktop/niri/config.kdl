@@ -1,6 +1,11 @@
 prefer-no-csd
 
 spawn-at-startup "awww-daemon"
+spawn-at-startup "xwayland-satellite"
+
+environment {
+    DISPLAY ":0"
+}
 
 output "DP-1" {
     mode "5120x1440@240"
