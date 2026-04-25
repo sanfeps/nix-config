@@ -6,7 +6,8 @@
   imports = [
     ./alacritty.nix
     ./wofi.nix
-    ./quickshell/quickshell.nix
+    # ./quickshell/quickshell.nix  # WIP custom shell, disabled in favor of noctalia
+    ./noctalia.nix
     ./vscode.nix
   ];
 

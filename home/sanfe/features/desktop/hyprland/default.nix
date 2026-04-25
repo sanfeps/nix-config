@@ -162,6 +162,7 @@
 
       exec-once = [
         "${lib.getExe' pkgs.awww "awww-daemon"}"
+        "noctalia-shell"
       ];
 
       exec = [
