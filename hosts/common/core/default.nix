@@ -12,6 +12,7 @@
       ./locale.nix
       ./nix.nix
       ./openssh.nix
+      ./pipewire.nix
       ./rpcbind.nix
       # ./podman.nix
       ./sops.nix
