@@ -13,6 +13,8 @@ output "DP-1" {
 }
 
 input {
+    mod-key "Alt"
+
     keyboard {
         xkb {
             layout "es"
@@ -61,6 +63,19 @@ binds {
     Mod+Ctrl+H { move-column-left; }
     Mod+Ctrl+L { move-column-right; }
 
+    Mod+Comma { consume-or-expel-window-left; }
+    Mod+Period { consume-or-expel-window-right; }
+    Mod+Shift+0 { reset-window-height; }
+
     Mod+F { maximize-column; }
     Mod+Shift+F { fullscreen-window; }
+    Mod+C { center-column; }
+
+    Mod+R { switch-preset-column-width; }
+    Mod+Shift+R { switch-preset-window-height; }
+
+    Mod+Minus { set-column-width "-10%"; }
+    Mod+Plus { set-column-width "+10%"; }
+    Mod+Shift+Minus { set-window-height "-10%"; }
+    Mod+Shift+Plus { set-window-height "+10%"; }
 }
