@@ -1,6 +1,6 @@
 prefer-no-csd
 
-spawn-at-startup "swww-daemon"
+spawn-at-startup "awww-daemon"
 
 output "DP-1" {
     mode "5120x1440@240"

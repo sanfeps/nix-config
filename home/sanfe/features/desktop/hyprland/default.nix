@@ -21,7 +21,7 @@
   home.packages = with pkgs; [
     grimblast
     hyprpicker
-    swww
+    awww
   ];
 
   wayland.windowManager.hyprland = {
@@ -161,7 +161,7 @@
       };
 
       exec-once = [
-        "${lib.getExe' pkgs.swww "swww-daemon"}"
+        "${lib.getExe' pkgs.awww "awww-daemon"}"
       ];
 
       exec = [

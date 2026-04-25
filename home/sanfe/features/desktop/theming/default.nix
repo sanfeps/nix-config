@@ -104,7 +104,7 @@ in {
 
   home.packages = with pkgs; [
     matugen
-    swww
+    awww
     pamHelper
   ];
 
@@ -309,7 +309,7 @@ in {
         echo "Error: file not found: $wallpaper" >&2
         exit 1
       fi
-      ${lib.getExe pkgs.swww} img "$wallpaper" \
+      ${lib.getExe pkgs.awww} img "$wallpaper" \
         --transition-type wipe \
         --transition-angle 30 \
         --transition-duration 1
