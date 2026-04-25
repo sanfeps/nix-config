@@ -80,8 +80,11 @@
           ".npm-global"
           ".local/share/containers"
 
-          # Quickshell state + matugen generated colors
+          # Quickshell state
           ".local/state/quickshell"
+
+          # Matugen generated colors
+          ".local/state/matugen"
 
           # Matugen wallpaper cache
           ".cache/matugen"

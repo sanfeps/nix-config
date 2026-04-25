@@ -5,7 +5,7 @@
   config,
   ...
 }: let
-  stateDir = "${config.home.homeDirectory}/.local/state/quickshell/user/generated";
+  stateDir = "${config.home.homeDirectory}/.local/state/matugen";
   templatesDir = "${config.xdg.configHome}/matugen/templates";
 
   # Catppuccin Mocha fallback palette

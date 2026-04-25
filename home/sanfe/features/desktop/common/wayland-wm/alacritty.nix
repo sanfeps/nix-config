@@ -8,7 +8,7 @@
 
     settings = {
       general.import = [
-        "${config.home.homeDirectory}/.local/state/quickshell/user/generated/alacritty-colors.toml"
+        "${config.home.homeDirectory}/.local/state/matugen/alacritty-colors.toml"
       ];
 
       font = {

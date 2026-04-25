@@ -45,7 +45,7 @@ QtObject {
     property color surfaceContainerHighest:  "#45475a"
 
     property FileView _colorsFile: FileView {
-        path: Quickshell.env("HOME") + "/.local/state/quickshell/user/generated/colors.json"
+        path: Quickshell.env("HOME") + "/.local/state/matugen/colors.json"
         watchChanges: true
         onTextChanged: root._applyColors(text)
         Component.onCompleted: root._applyColors(text)
