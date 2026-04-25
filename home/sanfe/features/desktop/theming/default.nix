@@ -298,6 +298,10 @@ in {
     white   = "{{colors.on_surface.default.hex}}"
   '';
 
+  home.file."Pictures/Wallpapers/no-man-sky-uw-wp.png".source = ./wallpapers/no-man-sky-uw-wp.png;
+  home.file."Pictures/Wallpapers/samurai-panda-uw-wp.jpg".source = ./wallpapers/samurai-panda-uw-wp.jpg;
+  home.file."Pictures/Wallpapers/space-ship-uw-wp.png".source = ./wallpapers/space-ship-uw-wp.png;
+
   # Wallpaper change script
   home.file.".local/bin/set-wallpaper" = {
     executable = true;
@@ -313,7 +317,7 @@ in {
         --transition-type wipe \
         --transition-angle 30 \
         --transition-duration 1
-      ${lib.getExe pkgs.matugen} image "$wallpaper"
+      ${lib.getExe pkgs.matugen} image --source-color-index 0 "$wallpaper"
     '';
   };
 
