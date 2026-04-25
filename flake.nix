@@ -2,6 +2,7 @@
   description = "My NixOS configuration";
 
   inputs = {
+    systems.url = "github:nix-systems/default";
     # Nix ecosystem
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-24.11";
