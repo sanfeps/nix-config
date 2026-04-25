@@ -35,6 +35,7 @@
     ../optional/greetd.nix
     ../optional/wireless.nix
     ../optional/podman.nix
+    ../optional/gamemode.nix
   ];
 
   environment.systemPackages = with pkgs; [
