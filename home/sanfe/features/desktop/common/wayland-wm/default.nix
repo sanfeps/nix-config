@@ -13,6 +13,7 @@
   home.packages = with pkgs; [
     librewolf
     remmina
+    vesktop
   ];
 
   home.sessionVariables = {

@@ -100,6 +100,6 @@
 
   home.packages = with pkgs; [
     wireguard-tools
+    claude-code
   ];
-
 }
