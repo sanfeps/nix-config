@@ -1,5 +1,9 @@
 prefer-no-csd
 
+hotkey-overlay {
+    skip-at-startup
+}
+
 spawn-at-startup "awww-daemon"
 spawn-at-startup "sh" "-c" "until awww query >/dev/null 2>&1; do sleep 0.1; done; ~/.local/bin/set-wallpaper ~/Pictures/Wallpapers/space-ship-uw-wp.png"
 spawn-at-startup "xwayland-satellite"
