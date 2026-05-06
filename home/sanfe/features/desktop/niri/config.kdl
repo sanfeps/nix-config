@@ -37,6 +37,13 @@ input {
     focus-follows-mouse max-scroll-amount="0%"
 }
 
+window-rule {
+    match title="^Steam Big Picture Mode$"
+
+    open-focused true
+    open-fullscreen true
+}
+
 binds {
     Mod+Return { spawn "ghostty"; }
     Mod+D { spawn "wofi" "--show" "drun"; }
