@@ -40,6 +40,7 @@ in {
       extraHostNames =
         [
           "${hostname}.sfg.lo"
+          "${hostname}.ts.valgrindr.net"
         ]
         ++
         # Alias for localhost if it's the same host

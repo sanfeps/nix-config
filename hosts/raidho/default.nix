@@ -24,6 +24,7 @@
     # ===== Required Config =====
     #
     ../common/core
+    ../common/core/workstation.nix
     ../common/users/sanfe
 
     #
@@ -31,6 +32,7 @@
     #
     ../optional/greetd.nix
     ../optional/wireless.nix
+    ../optional/tailscale.nix
     ../optional/podman.nix
   ];
 

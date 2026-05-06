@@ -4,13 +4,20 @@
   ...
 }: let
   moonlight = lib.getExe pkgs.moonlight-qt;
+  midgardHost = "midgard.ts.valgrindr.net";
 
   pairMidgard = pkgs.writeShellScriptBin "moonlight-pair-midgard" ''
-    exec ${moonlight} pair midgard "$@"
+    exec ${moonlight} pair ${lib.escapeShellArg midgardHost} "$@"
   '';
 
   streamMidgard = pkgs.writeShellScriptBin "moonlight-stream-midgard" ''
-    exec ${moonlight} stream --1080 --fps 60 --display-mode fullscreen --quit-after midgard "Steam Big Picture"
+    exec ${moonlight} stream \
+      --1080 \
+      --fps 60 \
+      --display-mode fullscreen \
+      --quit-after \
+      ${lib.escapeShellArg midgardHost} \
+      "Steam Big Picture"
   '';
 in {
   home.packages = [

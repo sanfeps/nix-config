@@ -27,12 +27,14 @@
     # ===== Required Config =====
     #
     ../common/core
+    ../common/core/workstation.nix
     ../common/users/sanfe
 
     #
     # ===== Optional Config =====
     #
     ../optional/greetd.nix
+    ../optional/tailscale.nix
     ../optional/podman.nix
     ../optional/gamemode.nix
   ];
