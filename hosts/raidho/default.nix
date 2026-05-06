@@ -1,4 +1,5 @@
 {
+  pkgs,
   inputs,
   lib,
   config,
@@ -53,7 +54,21 @@
 
   security.pam.services.qs-lock = {};
 
-  hardware.graphics.enable = true;
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [
+      intel-media-driver
+      vpl-gpu-rt
+    ];
+  };
+
+  environment.sessionVariables = {
+    LIBVA_DRIVER_NAME = "iHD";
+  };
+
+  environment.systemPackages = with pkgs; [
+    libva-utils
+  ];
 
   system.stateVersion = "24.11";
 }
