@@ -35,6 +35,7 @@
     ../optional/wireless.nix
     ../optional/tailscale.nix
     ../optional/podman.nix
+    ../optional/zram.nix
   ];
 
   networking = {

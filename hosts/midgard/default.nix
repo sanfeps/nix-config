@@ -21,6 +21,8 @@
       lib = lib;
       config = config;
       device = "/dev/nvme0n1";
+      withSwap = true;
+      swapSize = "16";
     })
 
     #
@@ -37,6 +39,8 @@
     ../optional/tailscale.nix
     ../optional/podman.nix
     ../optional/gamemode.nix
+    ../optional/zram.nix
+    ../optional/sunshine.nix
   ];
 
   environment.systemPackages = with pkgs; [
@@ -91,7 +95,7 @@
     modesetting.enable = true;
     open = true;
     powerManagement.enable = true;
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
+    package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
   };
   system.stateVersion = "24.11";
 }

@@ -6,6 +6,7 @@
   imports = [
     ./steam.nix
     ./mangohud.nix
+    ./sunshine.nix
   ];
   home = {
     packages = with pkgs; [gamescope];
