@@ -95,12 +95,12 @@
       };
 
       # Personal laptop
-      # raidho = lib.nixosSystem {
-      #   modules = [./hosts/raidho];
-      #   specialArgs = {
-      #     inherit inputs outputs;
-      #   };
-      # };
+      raidho = lib.nixosSystem {
+        modules = [./hosts/raidho];
+        specialArgs = {
+          inherit inputs outputs;
+        };
+      };
       # # Core server (Vultr)
       asgard = lib.nixosSystem {
         modules = [./hosts/asgard];
