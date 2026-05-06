@@ -6,13 +6,13 @@ clients on `midgard` and `raidho`.
 ## Current domains
 
 - Login server: `https://headscale.valgrindr.net`
-- MagicDNS tailnet domain: `ts.valgrindr.net`
+- MagicDNS tailnet domain: `yggdrasil.local`
 
 That means hosts should end up reachable as:
 
-- `midgard.ts.valgrindr.net`
-- `raidho.ts.valgrindr.net`
-- future hosts as `<host>.ts.valgrindr.net`
+- `midgard.yggdrasil.local`
+- `raidho.yggdrasil.local`
+- future hosts as `<host>.yggdrasil.local`
 
 ## How the client side works
 
@@ -32,13 +32,13 @@ The auth key is intentionally kept out of the Nix store.
 Create the user once:
 
 ```sh
-sudo headscale users create sanfe
+sudo headscale users create yggdrasil
 ```
 
 Then create a preauth key whenever you want to enroll a host:
 
 ```sh
-sudo headscale preauthkeys create --user sanfe --expiration 24h
+sudo headscale preauthkeys create --user yggdrasil --expiration 24h
 ```
 
 You can use `--reusable` if you want to keep a longer-lived bootstrap key, but
@@ -73,14 +73,14 @@ On the host you just enrolled:
 
 ```sh
 tailscale status
-getent hosts midgard.ts.valgrindr.net
+getent hosts midgard.yggdrasil.local
 ```
 
 On another mesh host:
 
 ```sh
-ping midgard.ts.valgrindr.net
-ssh sanfe@midgard.ts.valgrindr.net
+ping midgard.yggdrasil.local
+ssh sanfe@midgard.yggdrasil.local
 ```
 
 For Moonlight:

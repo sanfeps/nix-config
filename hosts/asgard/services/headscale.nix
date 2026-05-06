@@ -3,7 +3,7 @@
   ...
 }: let
   loginDomain = "headscale.valgrindr.net";
-  tailnetDomain = "ts.valgrindr.net";
+  tailnetDomain = "yggdrasil.local";
   derpPort = 3478;
 in {
   services.headscale = {
