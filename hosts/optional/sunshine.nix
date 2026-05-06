@@ -3,7 +3,7 @@
   pkgs,
   ...
 }: let
-  steam = "${config.programs.steam.package}/bin/steam";
+  steam = "/run/current-system/sw/bin/steam";
   steamIcon = "${config.programs.steam.package}/share/icons/hicolor/256x256/apps/steam.png";
   launchSteamBigPicture = pkgs.writeShellScript "sunshine-steam-big-picture" ''
     set -eu
