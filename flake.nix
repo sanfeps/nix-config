@@ -42,6 +42,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # nix-gaming = {
     #   url = "github:fufexan/nix-gaming";
     #   inputs.nixpkgs.follows = "nixpkgs";
@@ -141,15 +146,16 @@
       #  };
       #};
       #
-      #   # Personal laptop
-      #   "sanfe@raidho" = lib.homeManagerConfiguration {
-      #     modules = [ ./home/sanfe/raidho.nix ./home/sanfe/nixpkgs.nix ];
-      #     pkgs = pkgsFor.x86_64-linux;
-      #     extraSpecialArgs = {
-      #       inherit inputs outputs;
-      #     };
+      # Personal laptop
+      # Standalone HM currently trips over impermanence/home.persistence.
+      # "sanfe@raidho" = lib.homeManagerConfiguration {
+      #   modules = [./home/sanfe/raidho.nix];
+      #   pkgs = pkgsFor.x86_64-linux;
+      #   extraSpecialArgs = {
+      #     inherit inputs outputs;
       #   };
-      #
+      # };
+
       # Core server (Vultr)
       "sanfe@asgard" = lib.homeManagerConfiguration {
         modules = [./home/sanfe/asgard.nix];

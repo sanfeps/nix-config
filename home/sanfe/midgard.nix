@@ -5,6 +5,7 @@
     ./features/desktop/niri
     ./features/desktop/theming
     ./features/games
+    ./features/cli
   ];
 
   home.sessionVariables = {

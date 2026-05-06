@@ -3,6 +3,7 @@
     ./common/core
     ./features/desktop/niri
     ./features/desktop/theming
+    ./features/cli
     ./features/games/moonlight.nix
   ];
 

@@ -13,8 +13,12 @@ environment {
     DISPLAY ":0"
 }
 
+// TODO: monitor specs are duplicated with hyprland (see home/sanfe/midgard.nix `monitors`).
+// Refactor to derive from `config.monitors` — preferably via niri-flake's typed
+// `programs.niri.settings.outputs`, or by templating this file from Nix.
 output "DP-1" {
     mode "5120x1440@239.761"
+    variable-refresh-rate
 }
 
 input {
@@ -34,7 +38,7 @@ input {
 }
 
 binds {
-    Mod+Return { spawn "alacritty"; }
+    Mod+Return { spawn "ghostty"; }
     Mod+D { spawn "wofi" "--show" "drun"; }
     Mod+Q { close-window; }
     Mod+Shift+E { quit; }

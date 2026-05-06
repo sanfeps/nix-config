@@ -5,6 +5,7 @@
 }: {
   imports = [
     ./alacritty.nix
+    ./ghostty.nix
     ./wofi.nix
     # ./quickshell/quickshell.nix  # WIP custom shell, disabled in favor of noctalia
     ./noctalia.nix
