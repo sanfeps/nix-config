@@ -29,6 +29,7 @@ in {
     autoStart = true;
     capSysAdmin = true;
     openFirewall = true;
+    settings.min_log_level = 1;
     applications = {
       apps = [
         {
@@ -48,4 +49,8 @@ in {
       ];
     };
   };
+
+  systemd.user.services.sunshine.serviceConfig.Environment = [
+    "LD_LIBRARY_PATH=/run/opengl-driver/lib:/run/opengl-driver-32/lib"
+  ];
 }
