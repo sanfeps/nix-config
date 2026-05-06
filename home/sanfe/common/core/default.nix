@@ -59,6 +59,13 @@
           # Claude Code
           ".claude"
 
+          # Codex
+          ".codex"
+
+          # OpenCode
+          ".config/opencode"
+          ".local/share/opencode"
+
           # Shell and editor state
           ".vim"
 
@@ -104,5 +111,7 @@
   home.packages = with pkgs; [
     wireguard-tools
     claude-code
+    codex
+    opencode
   ];
 }

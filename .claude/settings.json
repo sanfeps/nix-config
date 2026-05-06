@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(journalctl:*)",
+      "Bash(systemctl --user status:*)",
+      "Bash(systemctl --user show:*)",
+      "Bash(systemctl --user list-units:*)",
+      "Bash(systemctl --user cat:*)",
+      "Bash(systemctl status:*)",
+      "Bash(readlink:*)",
+      "Bash(stat:*)",
+      "Bash(file:*)",
+      "Bash(which:*)",
+      "Bash(env)",
+      "Bash(printenv:*)",
+      "Bash(ps:*)",
+      "Bash(pgrep:*)",
+      "Bash(niri msg:*)",
+      "Bash(nix flake:*)",
+      "Bash(nix eval:*)"
+    ]
+  }
+}
