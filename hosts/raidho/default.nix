@@ -18,8 +18,6 @@
       lib = lib;
       config = config;
       device = "/dev/nvme0n1";
-      withSwap = true;
-      swapSize = "8";
     })
 
     #
