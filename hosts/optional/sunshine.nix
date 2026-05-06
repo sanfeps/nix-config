@@ -1,23 +1,31 @@
 {
+  config,
+  pkgs,
+  ...
+}: let
+  steam = "${config.programs.steam.package}/bin/steam";
+  steamIcon = "${config.programs.steam.package}/share/icons/hicolor/256x256/apps/steam.png";
+in {
   services.sunshine = {
     enable = true;
     autoStart = true;
     capSysAdmin = true;
     openFirewall = true;
     applications = {
-      env = {
-        PATH = "$(PATH):$(HOME)/.local/bin";
-      };
       apps = [
         {
           name = "Steam Big Picture";
+          detached = [
+            "${steam} steam://open/bigpicture"
+          ];
           prep-cmd = [
             {
-              do = "steam steam://open/bigpicture";
-              undo = "steam steam://close/bigpicture";
+              do = "${pkgs.coreutils}/bin/true";
+              undo = "${steam} steam://close/bigpicture";
             }
           ];
-          image-path = "steam.png";
+          auto-detach = true;
+          image-path = steamIcon;
         }
       ];
     };
