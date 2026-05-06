@@ -17,7 +17,7 @@
     (import ../common/disks/btrfs-luks-impermanence-disk.nix {
       lib = lib;
       config = config;
-      device = "/dev/sda";
+      device = "/dev/nvme0n1";
       withSwap = true;
       swapSize = "8";
     })
