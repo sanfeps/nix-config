@@ -5,6 +5,7 @@
 }: let
   steam = "${config.programs.steam.package}/bin/steam";
   steamIcon = "${config.programs.steam.package}/share/icons/hicolor/256x256/apps/steam.png";
+  setsid = "${pkgs.util-linux}/bin/setsid";
 in {
   services.sunshine = {
     enable = true;
@@ -16,12 +17,12 @@ in {
         {
           name = "Steam Big Picture";
           detached = [
-            "${steam} steam://open/bigpicture"
+            "${setsid} ${steam} steam://open/bigpicture"
           ];
           prep-cmd = [
             {
               do = "${pkgs.coreutils}/bin/true";
-              undo = "${steam} steam://close/bigpicture";
+              undo = "${setsid} ${steam} steam://close/bigpicture";
             }
           ];
           auto-detach = true;
