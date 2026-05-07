@@ -26,7 +26,9 @@
 in {
   services.sunshine = {
     enable = true;
-    autoStart = true;
+    # Starting Sunshine during login races Niri for DRM/KMS on NVIDIA.
+    # Keep it installed, but start it on demand from a running session.
+    autoStart = false;
     openFirewall = true;
     settings.min_log_level = 1;
     applications = {
