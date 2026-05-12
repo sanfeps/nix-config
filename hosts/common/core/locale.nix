@@ -1,7 +1,8 @@
 {lib, ...}: {
   i18n = {
-    defaultLocale = lib.mkDefault "es_ES.UTF-8"; # Spanish as default languaje
+    defaultLocale = lib.mkDefault "en_US.UTF-8"; # English UI, Spanish regional formats via LC_*
     supportedLocales = lib.mkDefault [
+      "en_US.UTF-8/UTF-8"
       "es_ES.UTF-8/UTF-8"
     ];
 
