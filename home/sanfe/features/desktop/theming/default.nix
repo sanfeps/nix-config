@@ -133,8 +133,8 @@ in {
       };
     };
     cursor = {
-      package = pkgs.catppuccin-cursors.mochaBlue;
-      name = "catppuccin-mocha-blue-cursors";
+      package = pkgs.bibata-cursors;
+      name = "Bibata-Modern-Ice";
       size = 24;
     };
     targets.gtk.enable = false;
