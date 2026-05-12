@@ -46,7 +46,7 @@ window-rule {
 
 binds {
     Mod+Return { spawn "ghostty"; }
-    Mod+D { spawn "wofi" "--show" "drun"; }
+    Mod+Space { spawn "wofi" "--show" "drun"; }
     Mod+Q { close-window; }
     Mod+Shift+E { quit; }
     Mod+Shift+L { spawn "loginctl" "lock-session"; }
