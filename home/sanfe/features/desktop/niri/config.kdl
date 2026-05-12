@@ -47,7 +47,7 @@ window-rule {
 binds {
     Mod+Return { spawn "ghostty"; }
     Mod+Space { spawn "wofi" "--show" "drun"; }
-    Mod+Slash { spawn "voice-assistant"; }
+    Mod+P { spawn "voice-assistant"; }
     Mod+Q { close-window; }
     Mod+Shift+E { quit; }
     Mod+Shift+L { spawn "loginctl" "lock-session"; }
