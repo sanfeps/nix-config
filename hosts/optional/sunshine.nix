@@ -1,9 +1,15 @@
 {
   config,
   pkgs,
+  lib,
   ...
 }: let
+  monitor = lib.head (lib.filter (m: m.primary) config.home-manager.users.sanfe.monitors);
+  steamRefreshRate = lib.min monitor.refreshRate 120;
+  steamRenderWidth = monitor.width * 3 / 4;
+  steamRenderHeight = monitor.height * 3 / 4;
   steam = "/run/current-system/sw/bin/steam";
+  gamescope = "${pkgs.gamescope}/bin/gamescope";
   steamIcon = "${config.programs.steam.package}/share/icons/hicolor/256x256/apps/steam.png";
   launchSteamBigPicture = pkgs.writeShellScript "sunshine-steam-big-picture" ''
     set -eu
@@ -16,7 +22,21 @@
       echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS"
       echo "XDG_CURRENT_DESKTOP=$XDG_CURRENT_DESKTOP"
     } >> /tmp/sunshine-steam-big-picture.log
-    exec ${pkgs.util-linux}/bin/setsid ${steam} steam://open/bigpicture
+    # Keep Big Picture inside gamescope and force CEF onto the GPU.
+    exec ${pkgs.util-linux}/bin/setsid ${gamescope} \
+      -f \
+      -W ${toString monitor.width} \
+      -H ${toString monitor.height} \
+      -w ${toString steamRenderWidth} \
+      -h ${toString steamRenderHeight} \
+      -S fit \
+      -F nis \
+      --sharpness 10 \
+      -r ${toString steamRefreshRate} \
+      --adaptive-sync \
+      --expose-wayland \
+      --steam \
+      -- ${steam} -cef-force-gpu -tenfoot -pipewire-dmabuf
   '';
   closeSteamBigPicture = pkgs.writeShellScript "sunshine-steam-big-picture-close" ''
     set -eu
