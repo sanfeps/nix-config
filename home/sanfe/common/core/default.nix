@@ -27,7 +27,20 @@
 
   programs = {
     home-manager.enable = true;
-    git.enable = true;
+    gpg.enable = true;
+    git = {
+      enable = true;
+      signing = {
+        format = "openpgp";
+        signByDefault = false;
+      };
+    };
+  };
+
+  services.gpg-agent = {
+    enable = true;
+    enableZshIntegration = true;
+    pinentry.package = pkgs.pinentry-curses;
   };
 
   home = {
