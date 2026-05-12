@@ -3,6 +3,7 @@
     ./common/core
     ./features/desktop/niri
     ./features/desktop/theming
+    ./features/desktop/voice-assistant
     ./features/games
     ./features/cli
   ];
