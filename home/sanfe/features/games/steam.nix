@@ -4,39 +4,32 @@
   config,
   ...
 }: let
-  steam-with-pkgs = pkgs.steam.override {
-    extraPkgs = pkgs:
-      with pkgs; [
-        xorg.libXcursor
-        xorg.libXi
-        xorg.libXinerama
-        xorg.libXScrnSaver
-        libpng
-        libpulseaudio
-        libvorbis
-        stdenv.cc.cc.lib
-        libkrb5
-        keyutils
-	gamescope
-      ];
-  };
-
   monitor = lib.head (lib.filter (m: m.primary) config.monitors);
+  steamRefreshRate = lib.min monitor.refreshRate 120;
+  steamRenderWidth = monitor.width * 3 / 4;
+  steamRenderHeight = monitor.height * 3 / 4;
+  steamExe = "/run/current-system/sw/bin/steam";
   steam-session = let
     gamescope = lib.concatStringsSep " " [
       (lib.getExe pkgs.gamescope)
       "--output-width ${toString monitor.width}"
       "--output-height ${toString monitor.height}"
-      "--framerate-limit ${toString monitor.refreshRate}"
+      "--nested-width ${toString steamRenderWidth}"
+      "--nested-height ${toString steamRenderHeight}"
+      "--scaler fit"
+      "--filter nis"
+      "--sharpness 10"
+      "--nested-refresh ${toString steamRefreshRate}"
       "--prefer-output ${monitor.name}"
       "--adaptive-sync"
       "--expose-wayland"
-      "--hdr-enabled"
       "--steam"
     ];
     steam = lib.concatStringsSep " " [
-      "steam"
-      "steam://open/bigpicture"
+      steamExe
+      "-cef-force-gpu"
+      "-tenfoot"
+      "-pipewire-dmabuf"
     ];
   in
     pkgs.writeTextDir "share/wayland-sessions/steam-session.desktop" # ini
@@ -49,7 +42,6 @@
     '';
 in {
   home.packages = [
-    steam-with-pkgs
     steam-session
     pkgs.gamescope
     pkgs.protontricks
