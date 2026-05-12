@@ -31,6 +31,7 @@
         ".mozilla"
         ".config/remmina"
         ".local/share/remmina"
+        ".config/vesktop"
       ];
     };
   };

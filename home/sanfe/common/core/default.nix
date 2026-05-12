@@ -74,6 +74,9 @@
           ".local/state/home-manager"
           ".local/share/home-manager"
 
+          # direnv allow state (no per-project caches, esos van en .direnv/ del repo)
+          ".local/share/direnv"
+
           # Desktop state
           ".config/dconf"
           ".config/Mullvad VPN"
