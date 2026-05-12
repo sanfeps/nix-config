@@ -93,6 +93,7 @@ query_claude() {
 }
 
 strip_markdown() {
+  # shellcheck disable=SC2016
   sed -E '
     s/```[^`]*```//g;
     s/`([^`]*)`/\1/g;
