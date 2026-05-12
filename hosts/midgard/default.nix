@@ -46,18 +46,19 @@
   environment.systemPackages = with pkgs; [
     vulkan-tools
     mesa
-    (mesa.drivers or mesa)
     nodejs
     nvidia-vaapi-driver
   ];
 
   networking = {
     hostName = "midgard";
-    useDHCP = true;
   };
+  
+  networking.firewall.allowedTCPPorts = [ 8080 8088 ];
 
   boot.loader = {
     systemd-boot.enable = true;
+    systemd-boot.configurationLimit = 3;
     efi.canTouchEfiVariables = true;
     timeout = 3;
   };
