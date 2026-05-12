@@ -40,6 +40,7 @@ in {
     unitConfig.ConditionPathExists = authKeyPath;
     serviceConfig = {
       Type = "oneshot";
+      TimeoutStartSec = "30s";
     };
     path = [
       pkgs.coreutils
