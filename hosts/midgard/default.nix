@@ -41,6 +41,7 @@
     ../optional/gamemode.nix
     ../optional/zram.nix
     ../optional/sunshine.nix
+    ../optional/xdg-portal.nix
   ];
 
   environment.systemPackages = with pkgs; [
@@ -53,8 +54,8 @@
   networking = {
     hostName = "midgard";
   };
-  
-  networking.firewall.allowedTCPPorts = [ 8080 8088 ];
+
+  networking.firewall.allowedTCPPorts = [8080 8088];
 
   boot.loader = {
     systemd-boot.enable = true;
@@ -87,7 +88,7 @@
   security.pam.services.qs-lock = {};
 
   programs.steam.enable = true;
-  
+
   hardware.graphics.enable = true;
 
   services.xserver.videoDrivers = ["nvidia"];
