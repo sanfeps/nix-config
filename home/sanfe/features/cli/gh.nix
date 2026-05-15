@@ -6,7 +6,6 @@
   home.persistence = {
     "/persist".files = [
       ".config/gh/hosts.yml"
-      ".config/gh/config.yml"
     ];
   };
 }
