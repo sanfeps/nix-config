@@ -4,7 +4,7 @@
   ...
 }: let
   moonlight = lib.getExe pkgs.moonlight-qt;
-  midgardHost = "midgard.yggdrasil.local";
+  midgardHost = "midgard.ts.yggdrasil.lo";
 
   pairMidgard = pkgs.writeShellScriptBin "moonlight-pair-midgard" ''
     exec ${moonlight} pair ${lib.escapeShellArg midgardHost} "$@"

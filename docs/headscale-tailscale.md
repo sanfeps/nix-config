@@ -6,13 +6,13 @@ clients on `midgard` and `raidho`.
 ## Current domains
 
 - Login server: `https://headscale.valgrindr.net`
-- MagicDNS tailnet domain: `yggdrasil.local`
+- MagicDNS tailnet domain: `ts.yggdrasil.lo`
 
 That means hosts should end up reachable as:
 
-- `midgard.yggdrasil.local`
-- `raidho.yggdrasil.local`
-- future hosts as `<host>.yggdrasil.local`
+- `midgard.ts.yggdrasil.lo`
+- `raidho.ts.yggdrasil.lo`
+- future hosts as `<host>.ts.yggdrasil.lo`
 
 ## How the client side works
 
@@ -73,14 +73,14 @@ On the host you just enrolled:
 
 ```sh
 tailscale status
-getent hosts midgard.yggdrasil.local
+getent hosts midgard.ts.yggdrasil.lo
 ```
 
 On another mesh host:
 
 ```sh
-ping midgard.yggdrasil.local
-ssh sanfe@midgard.yggdrasil.local
+ping midgard.ts.yggdrasil.lo
+ssh sanfe@midgard.ts.yggdrasil.lo
 ```
 
 For Moonlight:

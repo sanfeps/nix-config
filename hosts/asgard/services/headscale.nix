@@ -1,9 +1,6 @@
-{
-  config,
-  ...
-}: let
+{config, ...}: let
   loginDomain = "headscale.valgrindr.net";
-  tailnetDomain = "yggdrasil.local";
+  tailnetDomain = "ts.yggdrasil.lo";
   derpPort = 3478;
 in {
   services.headscale = {

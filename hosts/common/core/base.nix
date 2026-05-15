@@ -38,7 +38,7 @@
   };
 
   hardware.enableRedistributableFirmware = true;
-  networking.domain = "sfg.lo";
+  networking.domain = "yggdrasil.lo";
 
   services.speechd.enable = lib.mkForce false;
 

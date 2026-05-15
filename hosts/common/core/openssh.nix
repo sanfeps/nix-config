@@ -18,7 +18,7 @@ in {
       # Allow forwarding ports to everywhere
       # GatewayPorts = "clientspecified";
       # Let WAYLAND_DISPLAY be forwarded
-      AcceptEnv = [ "WAYLAND_DISPLAY" ];
+      AcceptEnv = ["WAYLAND_DISPLAY"];
       X11Forwarding = true;
     };
 
@@ -39,16 +39,16 @@ in {
       publicKeyFile = ../../${hostname}/ssh_host_ed25519_key.pub;
       extraHostNames =
         [
-          "${hostname}.sfg.lo"
-          "${hostname}.yggdrasil.local"
+          "${hostname}.yggdrasil.lo"
+          "${hostname}.ts.yggdrasil.lo"
         ]
         ++
         # Alias for localhost if it's the same host
         (lib.optional (hostname == config.networking.hostName) "localhost")
-        # Alias to sfg.lo and git.sfg.lo if it's asgard
+        # Alias to yggdrasil.lo and git.yggdrasil.lo if it's asgard
         ++ (lib.optionals (hostname == "asgard") [
-          "sfg.lo"
-          "git.sfg.lo"
+          "yggdrasil.lo"
+          "git.yggdrasil.lo"
         ]);
     });
   };
