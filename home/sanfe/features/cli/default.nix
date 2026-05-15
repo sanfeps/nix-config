@@ -3,6 +3,7 @@
     ./bat.nix
     ./direnv.nix
     ./fzf.nix
+    ./gh.nix
     ./nix-index.nix
     ./starship.nix
     ./zsh
