@@ -3,6 +3,7 @@
 # transcription to Claude Code, then speaks the reply. Claude Code can take
 # real actions on the system (read/edit files, run commands) without prompts.
 set -euo pipefail
+shopt -s inherit_errexit
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/voice-assistant"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/voice-assistant"
@@ -14,24 +15,25 @@ PID_FILE="$STATE_DIR/recording.pid"
 AUDIO_FILE="$STATE_DIR/recording.wav"
 LOG_FILE="$STATE_DIR/voice-assistant.log"
 
-WHISPER_MODEL_NAME="ggml-medium.en.bin"
+WHISPER_LANG="${VOICE_ASSISTANT_LANG:-es}"
+WHISPER_MODEL_NAME="ggml-large-v3.bin"
 WHISPER_MODEL="$CACHE_DIR/$WHISPER_MODEL_NAME"
 WHISPER_MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$WHISPER_MODEL_NAME"
 
-PIPER_VOICE="en_US-amy-medium"
+PIPER_VOICE="es_ES-davefx-medium"
 PIPER_ONNX="$CACHE_DIR/${PIPER_VOICE}.onnx"
 PIPER_JSON="$CACHE_DIR/${PIPER_VOICE}.onnx.json"
-PIPER_BASE_URL="https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium"
+PIPER_BASE_URL="https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/davefx/medium"
 
 CLAUDE_MODEL="${VOICE_ASSISTANT_MODEL:-sonnet}"
-VOICE_SYSTEM_PROMPT='You are responding through a voice assistant. Reply in plain spoken prose — no markdown, no bullet points, no code blocks. Keep answers to one or two short sentences unless the user explicitly asks for detail. When the user asks you to take an action on the system (edit files, run commands), do it and then confirm in one sentence what you did.'
+VOICE_SYSTEM_PROMPT='Eres un asistente por voz. Responde en prosa hablada en español — sin markdown, sin viñetas, sin bloques de código. Mantén las respuestas en una o dos frases cortas salvo que el usuario pida explícitamente más detalle. Cuando el usuario te pida hacer una acción en el sistema (editar archivos, ejecutar comandos), hazla y luego confirma en una frase lo que hiciste.'
 
 log() { printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*" >> "$LOG_FILE"; }
 notify() { notify-send -a "voice-assistant" -t "${2:-3000}" "Voice assistant" "$1" || true; }
 
 ensure_models() {
   if [[ ! -s "$WHISPER_MODEL" ]]; then
-    notify "Downloading Whisper model (~1.5GB, one time)…" 10000
+    notify "Downloading Whisper model (~3GB, one time)…" 10000
     curl -fL --retry 3 -o "$WHISPER_MODEL.part" "$WHISPER_MODEL_URL"
     mv "$WHISPER_MODEL.part" "$WHISPER_MODEL"
   fi
@@ -65,12 +67,13 @@ stop_recording() {
 }
 
 transcribe() {
+  rm -f "${AUDIO_FILE}.txt"
   whisper-cli \
     --model "$WHISPER_MODEL" \
-    --language en \
+    --language "$WHISPER_LANG" \
     --no-prints \
     --output-txt \
-    --file "$AUDIO_FILE" >/dev/null
+    --file "$AUDIO_FILE" >/dev/null 2>>"$LOG_FILE"
   tr -d '\r' < "${AUDIO_FILE}.txt" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
 }
 
@@ -108,11 +111,13 @@ strip_markdown() {
 
 speak() {
   local text="$1"
+  log "tts: starting piper"
   printf '%s\n' "$text" | strip_markdown | piper \
     --model "$PIPER_ONNX" \
     --config "$PIPER_JSON" \
-    --output_raw 2>/dev/null \
-    | pw-cat --rate 22050 --channels 1 --format s16 --playback -
+    --output_raw 2>>"$LOG_FILE" \
+    | pw-cat --playback - --raw --rate 22050 --channels 1 --format s16 2>>"$LOG_FILE"
+  log "tts: done"
 }
 
 main() {
@@ -120,8 +125,12 @@ main() {
     stop_recording
     notify "🧠 Processing…" 2000
     ensure_models
+    local t0 t1 t2 t3
+    t0=$(date +%s.%N)
     local transcript
     transcript=$(transcribe)
+    t1=$(date +%s.%N)
+    log "timing: transcribe=$(awk "BEGIN{printf \"%.2f\", $t1-$t0}")s"
     if [[ -z "$transcript" ]]; then
       notify "✗ No speech detected." 3000
       exit 0
@@ -133,9 +142,13 @@ main() {
       notify "✗ Claude Code failed (run 'claude auth' if first time)." 6000
       exit 1
     fi
+    t2=$(date +%s.%N)
+    log "timing: claude=$(awk "BEGIN{printf \"%.2f\", $t2-$t1}")s"
     log "assistant: $reply"
     notify "💬 $reply" 6000
     speak "$reply"
+    t3=$(date +%s.%N)
+    log "timing: tts=$(awk "BEGIN{printf \"%.2f\", $t3-$t2}")s total=$(awk "BEGIN{printf \"%.2f\", $t3-$t0}")s"
   else
     ensure_models
     start_recording
