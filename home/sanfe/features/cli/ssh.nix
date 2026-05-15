@@ -21,6 +21,8 @@ in {
         );
         user = "sanfe";
         forwardAgent = true;
+        identityFile = "~/.ssh/lykill";
+        identitiesOnly = true;
       };
     };
   };
