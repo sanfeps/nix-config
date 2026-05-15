@@ -30,6 +30,8 @@
     gpg.enable = true;
     git = {
       enable = true;
+      userName = "sanfeps";
+      userEmail = "sanfelixguajardo@gmail.com";
       signing = {
         format = "openpgp";
         signByDefault = false;
