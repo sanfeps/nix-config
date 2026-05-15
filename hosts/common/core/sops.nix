@@ -10,7 +10,7 @@ in {
   #imports = [inputs.sops-nix.nixosModules.sops];
 
   #sops = {
-    # automatically import host SSH keys as age keys
-   # age.sshKeyPaths = map getKeyPath keys;
+  # automatically import host SSH keys as age keys
+  # age.sshKeyPaths = map getKeyPath keys;
   #};
 }

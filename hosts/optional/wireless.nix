@@ -21,10 +21,10 @@
       #	psk = "h973b77eM9AE7WN3Ub3W";
       #};
       "TP-Link_EF86" = {
-	psk = "61107341";
+        psk = "61107341";
       };
       "sanfe-wifi" = {
-	psk = "sanfe125";
+        psk = "sanfe125";
       };
     };
   };

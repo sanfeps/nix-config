@@ -6,7 +6,7 @@
       format = "$shlvl$username$hostname$nix_shell$git_branch$git_commit$git_state$git_status$directory$jobs$cmd_duration$character";
       shlvl = {
         disabled = false;
-	threshold = 3;
+        threshold = 3;
         symbol = "↕️";
         style = "bright-red bold";
       };

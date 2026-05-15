@@ -9,5 +9,4 @@
   #quickshell = final: prev: {
   #	quickshell = inputs.quickshell.packages.${prev.stdenv.hostPlatform.system}.default;
   #};
-  
 }
