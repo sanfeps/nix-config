@@ -22,7 +22,7 @@ output "DP-1" {
 }
 
 input {
-    mod-key "Alt"
+    mod-key "Super"
 
     keyboard {
         xkb {
