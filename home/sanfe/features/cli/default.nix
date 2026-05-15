@@ -5,6 +5,7 @@
     ./fzf.nix
     ./gh.nix
     ./nix-index.nix
+    ./ssh.nix
     ./starship.nix
     ./zsh
   ];
