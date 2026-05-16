@@ -25,8 +25,8 @@ in {
       logtail.enabled = false;
       log.level = "warn";
       derp = {
-        urls = [];
-        auto_update_enabled = false;
+        urls = ["https://controlplane.tailscale.com/derpmap/default"];
+        auto_update_enabled = true;
         server = {
           enable = true;
           region_id = 999;
