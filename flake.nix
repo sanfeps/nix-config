@@ -14,10 +14,10 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    #sops-nix = {
-    #  url = "github:mic92/sops-nix";
-    #  inputs.nixpkgs.follows = "nixpkgs";
-    #};
+    sops-nix = {
+      url = "github:mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # nix-gl = {
     #   url = "github:nix-community/nixgl";
     #   inputs.nixpkgs.follows = "nixpkgs";

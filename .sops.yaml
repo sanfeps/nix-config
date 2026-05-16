@@ -1,8 +1,16 @@
 keys:
   - &users
-    - &sanfe age1kpyzk29547qtzsrq0ffdmnjqp2nw6vsswscp8vrcz87zvdr23pwq29qqxg
+    - &sanfe age1dzpr70ksa4nvcjrt3amwxzs0vu7mr7wwupz7c7n0rcym5s937upsk0tyly
+  - &hosts
+    - &asgard age1z2v0al9d5g97c25vqw5kdan7upvyuhm9v9xjqa5fp6xvtjt7xens4hxq7m
 creation_rules:
-  - path_regex: hosts/common/secrets.ya?ml$
+  - path_regex: hosts/common/secrets\.ya?ml$
     key_groups:
-      - age: 
-        - *sanfe
+      - age:
+          - *sanfe
+          - *asgard
+  - path_regex: hosts/asgard/secrets\.ya?ml$
+    key_groups:
+      - age:
+          - *sanfe
+          - *asgard

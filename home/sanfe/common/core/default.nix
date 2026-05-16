@@ -70,6 +70,7 @@
           # SSH and security
           ".ssh"
           ".pki"
+          ".config/sops"
 
           # Claude Code
           ".claude"
