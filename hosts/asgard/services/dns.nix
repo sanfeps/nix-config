@@ -65,13 +65,4 @@ in {
   services.caddy.virtualHosts."http://adguard.${lanZone}".extraConfig = ''
     reverse_proxy 127.0.0.1:${toString webPort}
   '';
-
-  environment.persistence."${config.hostSpec.persistFolder}".directories = [
-    {
-      directory = "/var/lib/AdGuardHome";
-      user = "adguardhome";
-      group = "adguardhome";
-      mode = "0755";
-    }
-  ];
 }
