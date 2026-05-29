@@ -25,6 +25,11 @@ in {
     };
   };
 
+  # Upstream setup unit assumes its tmpfiles already exist, but doesn't
+  # depend on systemd-tmpfiles-setup; without this the first boot races and
+  # the maintenance script fails to find storage/logs.
+  systemd.services.firefly-iii-data-importer-setup.after = ["systemd-tmpfiles-setup.service"];
+
   services.caddy.virtualHosts."http://${virtualHost}".extraConfig = ''
     root * ${config.services.firefly-iii-data-importer.package}/public
     php_fastcgi unix/${config.services.phpfpm.pools.firefly-iii-data-importer.socket}

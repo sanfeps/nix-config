@@ -43,6 +43,10 @@ in {
     };
   };
 
+  # Same tmpfiles race as the importer; harmless to declare even though
+  # firefly-iii happened to win the race on first boot.
+  systemd.services.firefly-iii-setup.after = ["systemd-tmpfiles-setup.service"];
+
   services.caddy.virtualHosts."http://${virtualHost}".extraConfig = ''
     root * ${config.services.firefly-iii.package}/public
     php_fastcgi unix/${config.services.phpfpm.pools.firefly-iii.socket}
