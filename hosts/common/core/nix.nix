@@ -16,7 +16,6 @@ in {
       system-features = [
         "kvm"
       ];
-      trusted-users = ["root" "@wheel"];
       flake-registry = ""; # Disable global flake registry
     };
     gc = {
