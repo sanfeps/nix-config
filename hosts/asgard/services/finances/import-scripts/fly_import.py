@@ -140,8 +140,8 @@ def main():
     )
     k.add_argument(
         "--firefly-url",
-        default="http://firefly.asgard",
-        help="Firefly III base URL (default: http://firefly.asgard)",
+        default="http://firefly.lan.valgrindr.net",
+        help="Firefly III base URL (default: http://firefly.lan.valgrindr.net)",
     )
     k.add_argument(
         "--token-file",
