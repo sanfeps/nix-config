@@ -30,9 +30,29 @@ in {
     globalConfig = ''
       acme_dns njalla {env.NJALLA_API_TOKEN}
     '';
-    # Phase 2 validation vhost. Real reverse-proxies land in Phase 3.
-    virtualHosts."test.lan.valgrindr.net".extraConfig = ''
-      respond "bifrost edge - phase 2 ok"
+    # Single wildcard vhost: one LE cert covers every *.lan.valgrindr.net
+    # subdomain. Per-service routing happens via @host matchers + handle blocks.
+    # Phase 3a state: ghostfolio and home still live on asgard; bifrost just
+    # proxies. adguard goes to the local AdGuard webUI on this host.
+    virtualHosts."*.lan.valgrindr.net".extraConfig = ''
+      @adguard host adguard.lan.valgrindr.net
+      handle @adguard {
+        reverse_proxy 127.0.0.1:3000
+      }
+
+      @ghostfolio host ghostfolio.lan.valgrindr.net
+      handle @ghostfolio {
+        reverse_proxy 192.168.1.54:3333
+      }
+
+      @home host home.lan.valgrindr.net
+      handle @home {
+        reverse_proxy 192.168.1.54:8123
+      }
+
+      handle {
+        respond "bifrost edge - unknown subdomain" 404
+      }
     '';
   };
 

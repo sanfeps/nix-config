@@ -3,6 +3,13 @@
   lib,
   ...
 }: let
+  # During the asgard→bifrost cutover, bifrost owns DNS+Caddy for everything
+  # except firefly (PHP served from disk; stays on asgard until a TCP-fronted
+  # split is in place). All rewrites here are dormant until clients switch to
+  # bifrost as their resolver (Phase 3b).
+  bifrostIp = "192.168.1.55";
+  asgardIp = "192.168.1.54";
+  lanZone = "lan.valgrindr.net";
   webPort = 3000;
   # bcrypt hash for the AdGuard webUI admin (same recipe as asgard).
   # Rotate with:
@@ -40,11 +47,42 @@ in {
         ];
         cache_size = 4194304;
       };
-      # Rewrites land here in Phase 3 when the cutover from asgard happens.
       filtering = {
         protection_enabled = true;
         rewrites_enabled = true;
-        rewrites = [];
+        rewrites = [
+          {
+            domain = "adguard.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            domain = "ghostfolio.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            domain = "home.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            # mqtt is plain TCP (mosquitto), not HTTP. Caddy doesn't proxy it.
+            # Rewrite kept for clients that point their MQTT URL at this name.
+            # TODO(phase 3b): rebind mosquitto to LAN or remove this rewrite.
+            domain = "mqtt.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            # firefly stays on asgard: PHP served from disk via php_fastcgi
+            # (Caddy reads files locally). Until we split asgard-side Caddy
+            # onto a TCP port, this rewrite must keep pointing at asgard.
+            domain = "firefly.${lanZone}";
+            answer = asgardIp;
+            enabled = true;
+          }
+        ];
       };
     };
   };
