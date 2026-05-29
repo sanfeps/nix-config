@@ -322,7 +322,8 @@ A typical service on asgard wants a hostname like `myservice.lan.valgrindr.net`.
 ## Active Hosts
 
 - **midgard**: Main desktop (x86_64-linux, AMD CPU, xanmod kernel, Steam enabled). NixOS-integrated home-manager.
-- **asgard**: Core server (Proxmox VM on the home LAN, x86_64-linux). Owns headscale, AdGuard, Caddy, Firefly III, etc. Reachable at `192.168.1.54` on LAN and `100.64.0.1` on tailnet.
+- **asgard**: Core app server (Proxmox VM on the home LAN, x86_64-linux). Owns the finance stack (Firefly III, Ghostfolio, shared Postgres) and home-automation (Home Assistant, Mosquitto). Reachable at `192.168.1.54` on LAN and `100.64.0.1` on tailnet. Currently still owns networking (AdGuard, headscale, Caddy, DDNS) — those are being migrated to `bifrost`; see `hosts/bifrost/CLAUDE.md` for phase status.
+- **bifrost**: Networking host (Proxmox VM, x86_64-linux). Phase 1: minimal, only tailscale. Will own AdGuard, headscale, Njalla DDNS, and Caddy with LE wildcard cert (`*.lan.valgrindr.net` via Njalla DNS-01) after Phase 2/3 cutover.
 
 ## Important Notes
 

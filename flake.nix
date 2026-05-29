@@ -114,6 +114,14 @@
         };
       };
 
+      # Networking host (DNS, headscale, ingress) — see hosts/bifrost/CLAUDE.md
+      bifrost = lib.nixosSystem {
+        modules = [./hosts/bifrost];
+        specialArgs = {
+          inherit inputs outputs;
+        };
+      };
+
       # # Build and game server (Oracle)
       # nidavellir = lib.nixosSystem {
       #   modules = [./hosts/nidavellir];
@@ -128,7 +136,6 @@
       #     inherit inputs outputs;
       #   };
       # };
-      # Bifrost (VPN or proxy server)
       # Heimdall (firewall)
       # Mimir (DB and RAG agent)
       # Niflheim (TOR node and XMR chain)
