@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """fly-import: ingest external statements into Firefly III.
 
 Subcommands:
