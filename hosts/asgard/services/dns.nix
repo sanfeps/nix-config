@@ -6,9 +6,9 @@
   lanIp = "192.168.1.54";
   lanZone = "lan.valgrindr.net";
   webPort = 3000;
-  # bcrypt hash of "changeme"; swap via `htpasswd -nbB admin <pass> | cut -d: -f2`.
-  # TODO: move to sops template once C is in place.
-  adminBcrypt = "$2y$05$QnLhYrJn0VcVBFD3YuHRreH3cxVn3yxhBnPn8cjy1ZKQe9yLLJ64e";
+  # bcrypt hash for the AdGuard webUI admin. Rotate with:
+  #   nix shell nixpkgs#apacheHttpd -c htpasswd -nbB sanfe '<pass>' | cut -d: -f2
+  adminBcrypt = "$2y$05$UJFA2qOb1d.tzQmJSeCFXurCL1aVqQ1Gdn.imHh5HrGQcc.8p.AUi";
 in {
   # systemd-resolved owns 127.0.0.53:53 by default; turn its stub listener off
   # so AdGuard can bind :53 on every interface.
@@ -27,7 +27,7 @@ in {
     settings = {
       users = [
         {
-          name = "admin";
+          name = "sanfe";
           password = adminBcrypt;
         }
       ];
