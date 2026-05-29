@@ -30,14 +30,25 @@ nix flake check
 
 ### Home Manager Operations
 
-```bash
-# Build and activate home-manager configuration
-home-manager switch --flake .
+Home-manager is NixOS-integrated on most hosts (midgard), so it gets activated as part of `nixos-rebuild switch`. Standalone home-manager only exists for hosts where the user lives without root (currently only `sanfe@asgard`):
 
-# Build for specific user@host
-home-manager switch --flake .#sanfe@midgard
+```bash
+# Standalone home-manager (only sanfe@asgard is exposed)
 home-manager switch --flake .#sanfe@asgard
 ```
+
+### Remote Deploys
+
+`asgard` is a Proxmox VM on the LAN. Deploys are driven from a workstation (midgard) using `--target-host` and `--build-host` together — both point at the remote so the closure is built on asgard and never pulled through the workstation:
+
+```bash
+NIX_SSHOPTS="-i ~/.ssh/lykill" nixos-rebuild switch --flake .#asgard \
+  --target-host sanfe@192.168.1.54 \
+  --build-host  sanfe@192.168.1.54 \
+  --ask-sudo-password
+```
+
+`trusted-users` is intentionally NOT set on the workstation (rejected for security): always rely on `--build-host` instead of pushing pre-built closures.
 
 ### Code Formatting
 
@@ -196,30 +207,116 @@ Declarative Podman container services are managed through custom NixOS modules l
 ### Working with Secrets
 
 ```bash
-# Edit secrets file (requires age key)
+# Edit common secrets (decrypts on-the-fly with your age key)
 sops hosts/common/secrets.yaml
 
-# Generate age key from SSH key
-ssh-to-age -i ~/.ssh/id_ed25519 > ~/.config/sops/age/keys.txt
+# Edit per-host secrets
+sops hosts/asgard/secrets.yaml
 ```
 
 ### Testing Configuration Changes
 
 1. Make changes to relevant `.nix` files
 2. Format code: `nix fmt`
-3. Check syntax: `nix flake check`
-4. Test build: `nixos-rebuild build --flake .#hostname` or `home-manager build --flake .#user@hostname`
-5. Activate: `sudo nixos-rebuild test --flake .#hostname` (doesn't modify boot entries)
+3. Quick syntax check: `nix eval .#nixosConfigurations.{hostname}.config.system.build.toplevel.drvPath`
+4. Full check (slower): `nix flake check`
+5. Activate (test, no boot entry): `sudo nixos-rebuild test --flake .#hostname`
+
+## Operational Conventions
+
+### Commit Style
+
+- One-line conventional-commits messages: `type(scope): subject` (e.g. `fix(asgard): open port 53 in firewall`).
+- No body, no `Co-Authored-By` trailer, no Claude attribution.
+- Commits stay scoped: one logical change per commit. When the worktree has unrelated dirty files, use `git write-tree` / `git read-tree` to stage only the relevant subset.
+- **Never `git push` until the change has been validated end-to-end on the affected host**. Local commits are fine; pushing without validation is not.
+
+### Secrets Architecture (sops-nix)
+
+- `.sops.yaml` lists three age recipients: the user `&sanfe` and one per host (`&asgard`, `&midgard`). The user key is derived from `~/.ssh/id_ed25519` (transitional — will move to YubiKey-backed GPG); each host key is derived from its `ssh_host_ed25519_key`.
+- `hosts/common/secrets.yaml` is encrypted to user + all hosts (shared secrets, e.g. tailscale preauth).
+- `hosts/{hostname}/secrets.yaml` is encrypted to user + that host only.
+- `hosts/common/core/sops.nix` picks the per-host file when present and falls back to the common file.
+- Workstations auto-bootstrap the user's age key via sops: if `user-age-keys/<username>` is populated in `hosts/common/secrets.yaml`, the activation script seeds `~/.config/sops/age/keys.txt` so `sops` works without manual setup.
+
+**Adding a new secret**:
+1. `sops hosts/common/secrets.yaml` (or the per-host file) and add the key.
+2. Declare it in the consuming Nix module:
+   ```nix
+   sops.secrets."my-service/api-token" = {
+     owner = "my-service";
+     mode = "0400";
+   };
+   ```
+3. Reference the materialized path: `config.sops.secrets."my-service/api-token".path`.
+4. If a new host is added to `.sops.yaml`, re-encrypt existing files with `sops updatekeys hosts/common/secrets.yaml`.
+
+### SSH
+
+- All hosts ship an ed25519 `ssh_host_ed25519_key`; its public part is committed under `hosts/{hostname}/ssh_host_ed25519_key.pub` and converted to an age recipient.
+- User SSH config lives in home-manager; `~/.ssh/lykill` is the current key used to reach `sanfe@192.168.1.54` (asgard) for remote deploys.
+
+### Headscale Tailnet (`yggdrasil`)
+
+The tailnet is self-hosted via headscale on asgard. Key facts:
+
+- Login server: `https://headscale.valgrindr.net`
+- Base domain (Magic DNS): `ts.yggdrasil.lo`
+- IPv4 prefix: `100.64.0.0/10` (asgard `100.64.0.1`, midgard `100.64.0.2`)
+- DNS pushed to tailnet members: `192.168.1.54` (AdGuard on asgard) — set in `services.headscale.settings.dns.nameservers.global`. Hosts that import `hosts/optional/tailscale.nix` come up with `--accept-dns=true`.
+- Declarative bootstrap: `systemd.services.headscale-bootstrap` on asgard seeds the SQLite DB with the `yggdrasil` user and a reusable preauth key (prefix + hash live in sops).
+
+**Enrolling a new host**:
+1. Add `hosts/optional/tailscale.nix` to the host's imports.
+2. Ensure the host has access to the `tailscale-preauth-key` secret (it's already in `hosts/common/secrets.yaml`, so it works automatically once the host is in `.sops.yaml`).
+3. On first boot, `tailscale-autoconnect-valgrindr.service` runs `tailscale up --login-server https://headscale.valgrindr.net --authkey <preauth>`.
+4. Manual re-enroll if needed: `tailscale-login-valgrindr` (wrapper installed by the same module).
+
+### LAN DNS (AdGuard Home on asgard)
+
+AdGuard Home on asgard owns LAN DNS and is the authoritative resolver for `lan.valgrindr.net`:
+
+- Bound to `0.0.0.0:53` (DoH to Quad9 upstream).
+- WebUI on `127.0.0.1:3000`, reverse-proxied by Caddy at `http://adguard.lan.valgrindr.net`.
+- Module: `hosts/asgard/services/dns.nix`. Settings use `mutableSettings = false` so changes only happen through Nix.
+- Workstations on the LAN reach AdGuard either directly (router DHCP advertises it — TODO) or via Magic DNS through tailscale.
+
+**Gotchas worth memorizing**:
+- `services.adguardhome.openFirewall = true` opens only the **webUI port**, NOT 53. Port 53 must be declared explicitly:
+  ```nix
+  networking.firewall.allowedTCPPorts = [53];
+  networking.firewall.allowedUDPPorts = [53];
+  ```
+- AdGuard's settings schema puts rewrites under `filtering.rewrites`, **not** `dns.rewrites`. Each rewrite entry must include `enabled = true;` or the renderer marks it `enabled: false` and silently ignores it.
+- `services.resolved.settings.Resolve.DNSStubListener = "no";` is required on the AdGuard host so systemd-resolved frees port 53.
+- AdGuard's systemd unit uses `DynamicUser = true`, which puts state in `/var/lib/private/AdGuardHome` (bind-mounted to `/var/lib/AdGuardHome` per-service). Naïvely persisting `/var/lib/AdGuardHome` via `environment.persistence` conflicts with systemd's first-boot migration — leave it ephemeral until a `/var/lib/private` strategy is in place.
+
+### Adding a new networked service
+
+A typical service on asgard wants a hostname like `myservice.lan.valgrindr.net`. The checklist:
+
+1. **Define the service** in `hosts/asgard/services/{group}/` and bind it to `127.0.0.1`. Add it to `hosts/asgard/services/default.nix`.
+2. **Secrets** (if any): declare under `sops.secrets.…`; add the encrypted value with `sops`.
+3. **Persistence**: any state directory that should survive impermanence goes in `environment.persistence."${config.hostSpec.persistFolder}".directories`.
+4. **Caddy reverse proxy**: add a vhost with the `http://` prefix to disable auto-HTTPS:
+   ```nix
+   services.caddy.virtualHosts."http://myservice.lan.valgrindr.net".extraConfig = ''
+     reverse_proxy 127.0.0.1:${toString port}
+   '';
+   ```
+5. **DNS rewrite**: add an entry to `services.adguardhome.settings.filtering.rewrites` in `hosts/asgard/services/dns.nix` pointing at `192.168.1.54`, with `enabled = true;`.
+6. **Firewall**: if the service exposes ports beyond Caddy (e.g. a TCP listener), open them in `networking.firewall.allowedTCPPorts` — don't rely on the module's `openFirewall` without checking what it actually opens.
+7. **Deploy** with the remote-build pattern above. Verify with `host myservice.lan.valgrindr.net 127.0.0.1` on asgard before claiming success.
 
 ## Active Hosts
 
-- **midgard**: Main desktop (x86_64-linux, AMD CPU, xanmod kernel, Steam enabled)
-- **asgard**: Core server (Vultr, x86_64-linux)
+- **midgard**: Main desktop (x86_64-linux, AMD CPU, xanmod kernel, Steam enabled). NixOS-integrated home-manager.
+- **asgard**: Core server (Proxmox VM on the home LAN, x86_64-linux). Owns headscale, AdGuard, Caddy, Firefly III, etc. Reachable at `192.168.1.54` on LAN and `100.64.0.1` on tailnet.
 
 ## Important Notes
 
-- The configuration uses systemd-boot with a 3-second timeout
-- BTRFS subvolumes are used for snapshots and impermanence
-- All hosts use LUKS encryption for the root partition
-- The kernel is customized per-host (midgard uses linux_xanmod_latest)
-- Cross-compilation is enabled for aarch64-linux and i686-linux on capable hosts
+- The configuration uses systemd-boot with a 3-second timeout.
+- BTRFS subvolumes are used for snapshots and impermanence.
+- All hosts use LUKS encryption for the root partition.
+- The kernel is customized per-host (midgard uses `linux_xanmod_latest`).
+- Cross-compilation is enabled for aarch64-linux and i686-linux on capable hosts.
