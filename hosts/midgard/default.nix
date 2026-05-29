@@ -53,6 +53,9 @@
 
   networking = {
     hostName = "midgard";
+    hosts = {
+      "192.168.1.54" = ["firefly.asgard"];
+    };
   };
 
   networking.firewall.allowedTCPPorts = [8080 8088];
