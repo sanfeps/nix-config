@@ -74,4 +74,13 @@ in {
   services.caddy.virtualHosts."http://${virtualHost}".extraConfig = ''
     reverse_proxy 127.0.0.1:${toString port}
   '';
+
+  # Container binds 0.0.0.0:3333 (its image hardcodes HOST=0.0.0.0). Only
+  # bifrost should be able to reach it from off-host so it can reverse-proxy
+  # from the edge; the rest of the LAN must not see this port.
+  # extraCommands (iptables) instead of extraInputRules (nftables) because
+  # asgard still runs the iptables backend.
+  networking.firewall.extraCommands = ''
+    iptables -I nixos-fw -p tcp --dport ${toString port} -s 192.168.1.55 -j nixos-fw-accept
+  '';
 }
