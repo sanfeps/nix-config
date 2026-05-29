@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Documentation Layout
+
+Context lives in nested `CLAUDE.md` files. Claude Code auto-loads the root file plus any `CLAUDE.md` along the path of the files being touched, so per-area notes stay close to the code they describe:
+
+- `CLAUDE.md` (this file): cross-cutting conventions (commits, sops, headscale, DNS, deploys) and the new-service checklist.
+- `hosts/asgard/CLAUDE.md`: asgard-specific topology, services on the box, known gotchas.
+- `hosts/common/core/CLAUDE.md`: what each core module owns and the load order assumptions.
+- `modules/nixos/CLAUDE.md`: pattern for authoring reusable NixOS modules in this repo.
+
+**When you make a change that invalidates or extends what these files say, update the relevant `CLAUDE.md` in the same commit.** If a directory grows new architectural weight and doesn't yet have a `CLAUDE.md`, create one. Treat documentation drift as a bug.
+
 ## Overview
 
 This is a personal NixOS configuration repository using a flake-based setup with home-manager integration. The configuration uses an impermanence strategy with BTRFS and LUKS encryption for most hosts.
