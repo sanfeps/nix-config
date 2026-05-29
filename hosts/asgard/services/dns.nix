@@ -36,6 +36,10 @@ in {
           "149.112.112.112"
         ];
         cache_size = 4194304;
+      };
+      filtering = {
+        protection_enabled = true;
+        rewrites_enabled = true;
         rewrites = [
           {
             domain = "firefly.${lanZone}";
@@ -55,7 +59,6 @@ in {
           }
         ];
       };
-      filtering.protection_enabled = true;
     };
   };
 
