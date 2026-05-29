@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   ...
@@ -7,8 +8,6 @@
   jq = lib.getExe pkgs.jq;
   tr = "${pkgs.coreutils}/bin/tr";
   loginServer = "https://headscale.valgrindr.net";
-  secretDir = "/persist/secrets";
-  authKeyPath = "${secretDir}/tailscale-auth-key";
 in {
   services.resolved.enable = true;
 
@@ -22,22 +21,23 @@ in {
     "/var/lib/tailscale"
   ];
 
-  systemd.tmpfiles.rules = [
-    "d ${secretDir} 0700 root root -"
-  ];
+  sops.secrets."tailscale-preauth-key" = {
+    sopsFile = ../common/secrets.yaml;
+    mode = "0400";
+  };
 
   systemd.services.tailscale-autoconnect-valgrindr = {
-    description = "Auto-enroll host into Headscale if an auth key is present";
+    description = "Auto-enroll host into Headscale using sops-managed preauth key";
     after = [
       "tailscaled.service"
       "network-online.target"
+      "sops-nix.service"
     ];
     wants = [
       "tailscaled.service"
       "network-online.target"
     ];
     wantedBy = ["multi-user.target"];
-    unitConfig.ConditionPathExists = authKeyPath;
     serviceConfig = {
       Type = "oneshot";
       TimeoutStartSec = "30s";
@@ -59,7 +59,7 @@ in {
       exec ${tailscale} up \
         --login-server ${lib.escapeShellArg loginServer} \
         --accept-dns=true \
-        --authkey "$(${tr} -d '\n' < ${lib.escapeShellArg authKeyPath})"
+        --authkey "$(${tr} -d '\n' < ${lib.escapeShellArg config.sops.secrets."tailscale-preauth-key".path})"
     '';
   };
 
@@ -69,14 +69,6 @@ in {
         --login-server ${lib.escapeShellArg loginServer} \
         --accept-dns=true \
         "$@"
-    '')
-    (pkgs.writeShellScriptBin "tailscale-auth-key-install-valgrindr" ''
-      set -euo pipefail
-
-      install -d -m 700 ${lib.escapeShellArg secretDir}
-      install -m 600 /dev/stdin ${lib.escapeShellArg authKeyPath}
-      systemctl restart tailscale-autoconnect-valgrindr.service
-      systemctl --no-pager --full status tailscale-autoconnect-valgrindr.service
     '')
   ];
 }

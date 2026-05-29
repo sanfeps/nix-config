@@ -5,10 +5,7 @@
 }: let
   record = "headscale.valgrindr.net";
 in {
-  sops.secrets."njalla-key-headscale" = {
-    sopsFile = ../secrets.yaml;
-    mode = "0400";
-  };
+  sops.secrets."njalla-key-headscale".mode = "0400";
 
   systemd.services.njalla-ddns = {
     description = "Update Njalla DNS record ${record}";

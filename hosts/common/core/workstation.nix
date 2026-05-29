@@ -6,6 +6,8 @@
     ./mullvad-vpn.nix
   ];
 
+  hostSpec.profile = "workstation";
+
   # Udev rules for local development hardware.
   services.udev.packages = with pkgs; [
     platformio-core

@@ -19,5 +19,13 @@
       description = "The folder to persist data";
       default = "/persist";
     };
+    profile = lib.mkOption {
+      type = lib.types.enum ["server" "workstation"];
+      default = "server";
+      description = ''
+        Host role profile. Workstations get user-facing features such as
+        automatic bootstrap of the primary user's age key from sops.
+      '';
+    };
   };
 }
