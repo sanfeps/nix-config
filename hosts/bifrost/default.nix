@@ -28,6 +28,11 @@
     # ===== Optional Config =====
     #
     ../optional/tailscale.nix
+
+    #
+    # ===== Services =====
+    #
+    ./services
   ];
 
   networking = {
