@@ -22,6 +22,20 @@ All live under `services/` and are wired in `services/default.nix`:
   - **Backups**: `pg_dump` custom format daily, persisted at `/persist/var/backups/postgres/`, validated end-to-end (restorable).
 - **`home-automation/`** — Home Assistant + Mosquitto. Exposed via Caddy at `home.lan.valgrindr.net` / `mqtt.lan.valgrindr.net`.
 
+## Exit node
+
+Asgard se anuncia como Tailscale exit node (`services/tailscale-exit-node.nix`): `useRoutingFeatures = "server"` (NixOS habilita IP forwarding) + un oneshot `tailscale-advertise-exit-node` que aplica `tailscale set --advertise-exit-node=true` en cada boot/deploy. La aprobación es declarativa via `policy.path` en `headscale.nix` (`autoApprovers.exitNode` para el grupo del usuario `yggdrasil`), así que cualquier nodo enrolado en ese usuario que anuncie `0.0.0.0/0` + `::/0` queda aprobado sin pasar por `headscale nodes approve-routes`. Si añades subnet routers, mete su prefijo en `autoApprovers.routes` dentro del HuJSON del `policyFile`.
+
+**Clientes**: el opt-in es manual y por-cliente, intencionadamente. Cuando estés fuera de casa en una red hostil:
+
+```bash
+tailscale set --exit-node=asgard --exit-node-allow-lan-access=true
+# para volver:
+tailscale set --exit-node=
+```
+
+No lo pongas como default en ningún cliente: en LAN degrada el throughput (todo el tráfico daría la vuelta por casa) y el upload del ISP se convierte en el cuello de botella cuando lo usas fuera.
+
 ## Caddy
 
 A single Caddy instance fronts every web service. Vhosts are declared next to the service they front, **not** in a central caddy.nix. Always use the `http://` prefix on `services.caddy.virtualHosts."http://name.lan.valgrindr.net"` so Caddy doesn't try to provision a public TLS cert for a name that only resolves on the LAN.

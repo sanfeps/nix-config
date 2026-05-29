@@ -5,5 +5,6 @@
     ./finances
     ./headscale.nix
     ./home-automation
+    ./tailscale-exit-node.nix
   ];
 }

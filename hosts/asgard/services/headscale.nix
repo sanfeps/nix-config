@@ -7,6 +7,23 @@
   tailnetDomain = "ts.yggdrasil.lo";
   derpPort = 3478;
   bootstrapUser = "yggdrasil";
+  # Tailscale-compatible policy v2 (HuJSON). Lets asgard advertise exit-node
+  # routes without anyone running `headscale nodes approve-routes` by hand.
+  # Add more entries to autoApprovers.routes if subnet routers join later.
+  policyFile = pkgs.writeText "headscale-policy.hujson" ''
+    {
+      "groups": {
+        "group:exit-approvers": ["${bootstrapUser}@"]
+      },
+      "acls": [
+        {"action": "accept", "src": ["*"], "dst": ["*:*"]}
+      ],
+      "autoApprovers": {
+        "exitNode": ["group:exit-approvers"],
+        "routes": {}
+      }
+    }
+  '';
 in {
   services.headscale = {
     enable = true;
@@ -36,6 +53,10 @@ in {
           region_name = "valgrindr";
           stun_listen_addr = "0.0.0.0:${toString derpPort}";
         };
+      };
+      policy = {
+        mode = "file";
+        path = "${policyFile}";
       };
     };
   };
