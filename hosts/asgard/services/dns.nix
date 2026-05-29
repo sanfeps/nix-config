@@ -60,7 +60,11 @@ in {
   };
 
   # asgard itself resolves through AdGuard so rewrites apply locally too.
-  networking.nameservers = lib.mkForce ["127.0.0.1"];
+  # Quad9 fallback keeps DNS working if AdGuard is down (e.g. boot/rebuild loop).
+  networking.nameservers = lib.mkForce [
+    "127.0.0.1"
+    "9.9.9.9"
+  ];
 
   services.caddy.virtualHosts."http://adguard.${lanZone}".extraConfig = ''
     reverse_proxy 127.0.0.1:${toString webPort}
