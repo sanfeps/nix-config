@@ -15,6 +15,7 @@
       ./sops.nix
       ./zsh.nix
       ./optin-persistence.nix
+      ./persist-exceptions.nix
       ../../../modules/common/host-spec.nix
     ]
     ++ (builtins.attrValues outputs.nixosModules);
