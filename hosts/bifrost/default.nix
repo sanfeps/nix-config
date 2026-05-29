@@ -37,7 +37,15 @@
 
   networking = {
     hostName = "bifrost";
-    useDHCP = true;
+    # Static-at-OS until the router supports DHCP reservations.
+    useDHCP = false;
+    interfaces.ens18.ipv4.addresses = [
+      {
+        address = "192.168.1.55";
+        prefixLength = 24;
+      }
+    ];
+    defaultGateway = "192.168.1.1";
   };
 
   boot.loader = {
