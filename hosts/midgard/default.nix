@@ -54,7 +54,7 @@
   networking = {
     hostName = "midgard";
     hosts = {
-      "192.168.1.54" = ["firefly.asgard"];
+      "192.168.1.54" = ["firefly.asgard" "importer.asgard"];
     };
   };
 
@@ -95,6 +95,9 @@
   hardware.graphics.enable = true;
 
   services.xserver.videoDrivers = ["nvidia"];
+
+  # udev rules for ST-Link / probe-rs (TFM firmware flashing).
+  services.udev.packages = [pkgs.probe-rs-tools];
 
   hardware.nvidia = {
     modesetting.enable = true;
