@@ -14,6 +14,10 @@ in {
   # so AdGuard can bind :53 on every interface.
   services.resolved.settings.Resolve.DNSStubListener = "no";
 
+  # adguardhome's openFirewall only opens the webUI port; DNS needs explicit holes.
+  networking.firewall.allowedTCPPorts = [53];
+  networking.firewall.allowedUDPPorts = [53];
+
   services.adguardhome = {
     enable = true;
     mutableSettings = false;
