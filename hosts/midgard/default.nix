@@ -51,12 +51,7 @@
     nvidia-vaapi-driver
   ];
 
-  networking = {
-    hostName = "midgard";
-    hosts = {
-      "192.168.1.54" = ["firefly.asgard"];
-    };
-  };
+  networking.hostName = "midgard";
 
   networking.firewall.allowedTCPPorts = [8080 8088];
 
