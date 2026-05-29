@@ -18,10 +18,7 @@ in {
         override_local_dns = true;
         base_domain = tailnetDomain;
         magic_dns = true;
-        nameservers.global = [
-          "1.1.1.1"
-          "1.0.0.1"
-        ];
+        nameservers.global = ["192.168.1.54"];
       };
       prefixes = {
         v4 = "100.64.0.0/10";
