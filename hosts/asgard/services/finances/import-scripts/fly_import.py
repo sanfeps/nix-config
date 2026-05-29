@@ -140,8 +140,8 @@ def main():
     )
     k.add_argument(
         "--firefly-url",
-        default="http://localhost",
-        help="Firefly III base URL (default: http://localhost)",
+        default="http://firefly.asgard",
+        help="Firefly III base URL (default: http://firefly.asgard)",
     )
     k.add_argument(
         "--token-file",

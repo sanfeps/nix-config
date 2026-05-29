@@ -20,6 +20,10 @@ in {
     ];
   };
 
+  # Local-loopback hostname so scripts running on asgard can hit the Caddy
+  # vhost (which matches on Host: firefly.asgard) without going through DNS.
+  networking.hosts."127.0.0.1" = [virtualHost];
+
   services.firefly-iii = {
     enable = true;
     enableNginx = false;
