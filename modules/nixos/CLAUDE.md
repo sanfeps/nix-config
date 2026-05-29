@@ -42,7 +42,7 @@ Hosts that want it set `services.containers.myservice.enable = true` in their ow
 
 ## Current layout
 
-- `services/containers/` — Podman-backed service modules (`jellyfin` currently). Requires `hosts/optional/podman.nix` on the consuming host.
+- `services/containers/` — Podman-backed service modules (`jellyfin`, `ghostfolio`). Requires `hosts/optional/podman.nix` on the consuming host. `ghostfolio` showcases the env-file pattern: secrets enter via `environmentFile` (a path rendered by `sops.templates`) so the module itself stays secrets-free.
 
 ## Future direction
 

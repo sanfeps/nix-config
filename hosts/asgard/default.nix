@@ -30,6 +30,7 @@
     # ===== Optional Config =====
     #
     ../optional/tailscale.nix
+    ../optional/podman.nix
   ];
 
   # Jellyfin media server container

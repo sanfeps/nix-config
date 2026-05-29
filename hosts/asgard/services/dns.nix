@@ -65,6 +65,11 @@ in {
             answer = lanIp;
             enabled = true;
           }
+          {
+            domain = "ghostfolio.${lanZone}";
+            answer = lanIp;
+            enabled = true;
+          }
         ];
       };
     };

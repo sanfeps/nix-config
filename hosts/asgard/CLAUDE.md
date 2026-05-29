@@ -15,7 +15,11 @@ All live under `services/` and are wired in `services/default.nix`:
 - **`ddns.nix`** — systemd timer that updates Njalla's A record for `headscale.valgrindr.net` from the host's public IP. Uses `sops.secrets."njalla-key-headscale"`.
 - **`dns.nix`** — AdGuard Home (DNS + LAN-zone rewrites). See the root `CLAUDE.md` for the full DNS section; the gotchas (rewrites under `filtering`, port 53 not opened by `openFirewall`, `enabled = true` per rewrite, `DynamicUser` impermanence trap) are non-obvious — read them before editing.
 - **`headscale.nix`** — self-hosted tailscale control plane fronted by Caddy on `headscale.valgrindr.net`. The `headscale-bootstrap` oneshot seeds the SQLite DB with the `yggdrasil` user and a reusable preauth key whose prefix+hash come from sops.
-- **`finances/`** — Firefly III + PostgreSQL + Kutxabank importer (`fly-import` CLI). Caddy fronts Firefly at `http://firefly.lan.valgrindr.net`. Backups: `pg_dump` custom format daily, persisted at `/persist/var/backups/postgres/`, validated end-to-end (restorable).
+- **`finances/`** — shared PostgreSQL (TCP on `127.0.0.1` so containers can connect via `--network=host`) + per-app modules:
+  - **Firefly III** at `http://firefly.lan.valgrindr.net` (native NixOS module, peer auth via socket).
+  - **Ghostfolio** at `http://ghostfolio.lan.valgrindr.net` (Podman container, TCP+scram auth, local Redis on `127.0.0.1:6379`). Secrets come from sops via `sops.templates` rendered into env / SQL files at activation. **User accounts are not declarative**: Ghostfolio uses a passwordless model where each user's auth token is generated server-side at signup and stored hashed in Postgres (`Account` table). The current user's token is stashed in sops at `finances/ghostfolio-user-token` purely as a recovery aid — on a from-scratch rebuild of asgard, restore the Postgres dump (`/persist/var/backups/postgres/`) **before** logging in; if the DB is empty Ghostfolio will mint a new token and the one in sops becomes useless.
+  - **`fly-import`** CLI for Kutxabank PDFs.
+  - **Backups**: `pg_dump` custom format daily, persisted at `/persist/var/backups/postgres/`, validated end-to-end (restorable).
 - **`home-automation/`** — Home Assistant + Mosquitto. Exposed via Caddy at `home.lan.valgrindr.net` / `mqtt.lan.valgrindr.net`.
 
 ## Caddy
