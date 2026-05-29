@@ -54,7 +54,7 @@
   networking = {
     hostName = "midgard";
     hosts = {
-      "192.168.1.54" = ["firefly.asgard" "importer.asgard"];
+      "192.168.1.54" = ["firefly.asgard"];
     };
   };
 
