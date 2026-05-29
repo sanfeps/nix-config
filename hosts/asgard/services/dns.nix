@@ -44,18 +44,22 @@ in {
           {
             domain = "firefly.${lanZone}";
             answer = lanIp;
+            enabled = true;
           }
           {
             domain = "home.${lanZone}";
             answer = lanIp;
+            enabled = true;
           }
           {
             domain = "mqtt.${lanZone}";
             answer = lanIp;
+            enabled = true;
           }
           {
             domain = "adguard.${lanZone}";
             answer = lanIp;
+            enabled = true;
           }
         ];
       };
