@@ -30,6 +30,13 @@ in {
     globalConfig = ''
       acme_dns njalla {env.NJALLA_API_TOKEN}
     '';
+    # Headscale lives on a PUBLIC domain (own cert via Njalla DNS-01 too) so
+    # the world can reach the tailnet control plane. Router port-forwards
+    # 80/443 to bifrost; the wildcard cert below covers only *.lan.valgrindr.net.
+    virtualHosts."headscale.valgrindr.net".extraConfig = ''
+      reverse_proxy 127.0.0.1:8080
+    '';
+
     # Single wildcard vhost: one LE cert covers every *.lan.valgrindr.net
     # subdomain. Per-service routing happens via @host matchers + handle blocks.
     # Phase 3a state: ghostfolio and home still live on asgard; bifrost just

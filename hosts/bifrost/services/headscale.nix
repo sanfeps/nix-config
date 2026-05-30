@@ -7,9 +7,10 @@
   tailnetDomain = "ts.yggdrasil.lo";
   derpPort = 3478;
   bootstrapUser = "yggdrasil";
-  # Tailscale-compatible policy v2 (HuJSON). Lets asgard advertise exit-node
-  # routes without anyone running `headscale nodes approve-routes` by hand.
-  # Add more entries to autoApprovers.routes if subnet routers join later.
+  # Tailscale-compatible policy v2 (HuJSON). Lets asgard (still on the tailnet
+  # as a regular peer post-cutover) advertise exit-node routes without anyone
+  # running `headscale nodes approve-routes` by hand. Add more entries to
+  # autoApprovers.routes if subnet routers join later.
   policyFile = pkgs.writeText "headscale-policy.hujson" ''
     {
       "groups": {
@@ -35,7 +36,8 @@ in {
         override_local_dns = true;
         base_domain = tailnetDomain;
         magic_dns = true;
-        nameservers.global = ["192.168.1.54"];
+        # Bifrost owns LAN DNS post-cutover; push its own IP to tailnet members.
+        nameservers.global = ["192.168.1.55"];
       };
       prefixes = {
         v4 = "100.64.0.0/10";
@@ -61,13 +63,6 @@ in {
     };
   };
 
-  services.caddy = {
-    enable = true;
-    virtualHosts."${loginDomain}".extraConfig = ''
-      reverse_proxy 127.0.0.1:${toString config.services.headscale.port}
-    '';
-  };
-
   users.users.${config.hostSpec.username}.extraGroups = [
     config.services.headscale.group
   ];
@@ -83,27 +78,16 @@ in {
       group = config.services.headscale.group;
       mode = "0750";
     }
-    {
-      directory = "/var/lib/caddy";
-      user = "caddy";
-      group = "caddy";
-      mode = "0700";
-    }
   ];
 
-  networking.firewall = {
-    allowedTCPPorts = [
-      80
-      443
-    ];
-    allowedUDPPorts = [derpPort];
-  };
-
-  networking.hosts."127.0.0.1" = [loginDomain];
+  networking.firewall.allowedUDPPorts = [derpPort];
 
   sops.secrets."headscale-bootstrap-prefix".mode = "0400";
   sops.secrets."headscale-bootstrap-hash".mode = "0400";
 
+  # Idempotent (INSERT OR IGNORE) — safe to keep enabled after migrating the
+  # SQLite DB from asgard. On a fresh DB it seeds the bootstrap user + preauth
+  # key; on a migrated DB it's a no-op.
   systemd.services.headscale-bootstrap = {
     description = "Seed headscale DB with declarative user and preauth key";
     after = ["headscale.service"];
