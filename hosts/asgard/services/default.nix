@@ -1,10 +1,7 @@
 {
   imports = [
-    ./ddns.nix
-    ./dns.nix
+    ./caddy.nix
     ./finances
-    ./headscale.nix
     ./home-automation
-    ./tailscale-exit-node.nix
   ];
 }
