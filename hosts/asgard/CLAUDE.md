@@ -13,7 +13,7 @@ Asgard used to also own networking (AdGuard, headscale, DDNS, exit-node). All of
 All live under `services/` and are wired in `services/default.nix`:
 
 - **`finances/`** — shared PostgreSQL (TCP on `127.0.0.1` so containers can connect via `--network=host`) + per-app modules:
-  - **Firefly III** at `http://firefly.lan.valgrindr.net` (native NixOS module, peer auth via socket, php_fastcgi by Unix socket — that's why it stayed on asgard and isn't proxied from bifrost: Caddy can only reach the FPM socket on the same host).
+  - **Firefly III** at `https://firefly.lan.valgrindr.net` (native NixOS module, peer auth via socket, php_fastcgi via Unix socket). TLS terminates on bifrost; bifrost proxies plain HTTP to asgard:80, where a tiny local Caddy translates HTTP→FastCGI to PHP-FPM's socket (the socket can't be reached across hosts, which is why asgard keeps Caddy at all). Caveat: trusted-proxy handling in Firefly is unreliable, so asgard's `php_fastcgi` lies to PHP with `env HTTPS on` + `env SERVER_PORT 443` — Symfony then thinks the connection is https and Laravel emits https:// URLs everywhere.
   - **Ghostfolio** (Podman container on TCP+scram auth, local Redis on `127.0.0.1:6379`). Caddy on bifrost reverse-proxies `http://ghostfolio.lan.valgrindr.net` → `192.168.1.54:3333`. Firewall on asgard restricts port 3333 to source `192.168.1.55` (bifrost) only.
   - Secrets come from sops via `sops.templates` rendered into env / SQL files at activation. **Ghostfolio user accounts are not declarative**: passwordless model with server-side tokens stored hashed in Postgres (`Account` table). The current user's token is stashed in sops at `finances/ghostfolio-user-token` purely as a recovery aid — on a from-scratch rebuild, restore the Postgres dump (`/persist/var/backups/postgres/`) **before** logging in; if the DB is empty Ghostfolio mints a new token and the one in sops becomes useless.
   - **`fly-import`** CLI for Kutxabank PDFs.
@@ -28,7 +28,7 @@ Asgard imports `hosts/optional/tailscale.nix` and enrols into the `yggdrasil` ta
 
 ## Caddy
 
-There is **no Caddy on asgard anymore**. All public-facing TLS termination and LAN ingress is bifrost's job. Services on asgard simply listen on a port and rely on bifrost to proxy in over the LAN (with firewall lock-down from asgard's side restricting source to `192.168.1.55`).
+Asgard runs a **minimal Caddy** solely as an HTTP→FastCGI translator for Firefly III (PHP-FPM Unix socket, can't be reached from bifrost across hosts). No TLS here — bifrost terminates TLS with the wildcard LE cert and proxies plain HTTP to asgard:80. Port 80 is firewalled to `192.168.1.55` (bifrost) only. Every other service on asgard (Ghostfolio, Home Assistant) listens directly and is proxied straight from bifrost without going through asgard's Caddy.
 
 ## Deploys
 
