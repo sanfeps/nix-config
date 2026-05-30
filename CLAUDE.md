@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Context lives in nested `CLAUDE.md` files. Claude Code auto-loads the root file plus any `CLAUDE.md` along the path of the files being touched, so per-area notes stay close to the code they describe:
 
 - `CLAUDE.md` (this file): cross-cutting conventions (commits, sops, headscale, DNS, deploys) and the new-service checklist.
-- `hosts/asgard/CLAUDE.md`: asgard-specific topology, services on the box, known gotchas.
+- `hosts/asgard/CLAUDE.md`: asgard-specific topology (app server), services on the box, known gotchas.
+- `hosts/bifrost/CLAUDE.md`: bifrost-specific topology (networking edge), services, recovery cheats.
 - `hosts/common/core/CLAUDE.md`: what each core module owns and the load order assumptions.
 - `modules/nixos/CLAUDE.md`: pattern for authoring reusable NixOS modules in this repo.
 
@@ -269,13 +270,14 @@ sops hosts/asgard/secrets.yaml
 
 ### Headscale Tailnet (`yggdrasil`)
 
-The tailnet is self-hosted via headscale on asgard. Key facts:
+The tailnet is self-hosted via headscale on bifrost. Key facts:
 
-- Login server: `https://headscale.valgrindr.net`
+- Login server: `https://headscale.valgrindr.net` (Njalla A record, DDNS-refreshed by `hosts/bifrost/services/ddns.nix`)
 - Base domain (Magic DNS): `ts.yggdrasil.lo`
-- IPv4 prefix: `100.64.0.0/10` (asgard `100.64.0.1`, midgard `100.64.0.2`)
-- DNS pushed to tailnet members: `192.168.1.54` (AdGuard on asgard) — set in `services.headscale.settings.dns.nameservers.global`. Hosts that import `hosts/optional/tailscale.nix` come up with `--accept-dns=true`.
-- Declarative bootstrap: `systemd.services.headscale-bootstrap` on asgard seeds the SQLite DB with the `yggdrasil` user and a reusable preauth key (prefix + hash live in sops).
+- IPv4 prefix: `100.64.0.0/10` (midgard `100.64.0.1`, asgard `100.64.0.2`, bifrost `100.64.0.3` — fresh DB after the Phase 3 cutover, assignment is by enrollment order)
+- DNS pushed to tailnet members: `192.168.1.55` (AdGuard on bifrost) — set in `services.headscale.settings.dns.nameservers.global`. Hosts that import `hosts/optional/tailscale.nix` come up with `--accept-dns=true`.
+- Exit-node: bifrost (`hosts/optional/tailscale-exit-node.nix`). Auto-approved by the inline HuJSON policy (`autoApprovers.exitNode` for `group:exit-approvers`). Opt-in per client: `tailscale set --exit-node=bifrost`.
+- Declarative bootstrap: `systemd.services.headscale-bootstrap` on bifrost seeds the SQLite DB with the `yggdrasil` user and a reusable preauth key (prefix + hash live in sops).
 
 **Enrolling a new host**:
 1. Add `hosts/optional/tailscale.nix` to the host's imports.
@@ -283,13 +285,14 @@ The tailnet is self-hosted via headscale on asgard. Key facts:
 3. On first boot, `tailscale-autoconnect-valgrindr.service` runs `tailscale up --login-server https://headscale.valgrindr.net --authkey <preauth>`.
 4. Manual re-enroll if needed: `tailscale-login-valgrindr` (wrapper installed by the same module).
 
-### LAN DNS (AdGuard Home on asgard)
+### LAN DNS (AdGuard Home on bifrost)
 
-AdGuard Home on asgard owns LAN DNS and is the authoritative resolver for `lan.valgrindr.net`:
+AdGuard Home on bifrost owns LAN DNS and is the authoritative resolver for `lan.valgrindr.net`:
 
 - Bound to `0.0.0.0:53` (DoH to Quad9 upstream).
-- WebUI on `127.0.0.1:3000`, reverse-proxied by Caddy at `http://adguard.lan.valgrindr.net`.
-- Module: `hosts/asgard/services/dns.nix`. Settings use `mutableSettings = false` so changes only happen through Nix.
+- WebUI on `127.0.0.1:3000`, reverse-proxied by Caddy at `https://adguard.lan.valgrindr.net` (TLS via the LE wildcard `*.lan.valgrindr.net`).
+- Module: `hosts/bifrost/services/dns.nix`. Settings use `mutableSettings = false` so changes only happen through Nix.
+- Rewrites point every `*.lan.valgrindr.net` name at bifrost (`192.168.1.55`), except `firefly.lan.valgrindr.net` → asgard (`192.168.1.54`) because Firefly's PHP-FPM Unix socket can't be proxied across hosts.
 - Workstations on the LAN reach AdGuard either directly (router DHCP advertises it — TODO) or via Magic DNS through tailscale.
 
 **Gotchas worth memorizing**:
@@ -301,29 +304,54 @@ AdGuard Home on asgard owns LAN DNS and is the authoritative resolver for `lan.v
 - AdGuard's settings schema puts rewrites under `filtering.rewrites`, **not** `dns.rewrites`. Each rewrite entry must include `enabled = true;` or the renderer marks it `enabled: false` and silently ignores it.
 - `services.resolved.settings.Resolve.DNSStubListener = "no";` is required on the AdGuard host so systemd-resolved frees port 53.
 - AdGuard's systemd unit uses `DynamicUser = true`, which puts state in `/var/lib/private/AdGuardHome` (bind-mounted to `/var/lib/AdGuardHome` per-service). Naïvely persisting `/var/lib/AdGuardHome` via `environment.persistence` conflicts with systemd's first-boot migration — leave it ephemeral until a `/var/lib/private` strategy is in place.
+- AdGuard reads `/etc/hosts` by default. Any `networking.hosts."127.0.0.1" = ["foo.example"]` on the same host propagates as a `127.0.0.1` answer to **all** clients of that AdGuard. Don't do it unless you really mean it.
 
 ### Adding a new networked service
 
-A typical service on asgard wants a hostname like `myservice.lan.valgrindr.net`. The checklist:
+Services run on the host that best fits them; ingress is always bifrost. Two patterns:
 
-1. **Define the service** in `hosts/asgard/services/{group}/` and bind it to `127.0.0.1`. Add it to `hosts/asgard/services/default.nix`.
-2. **Secrets** (if any): declare under `sops.secrets.…`; add the encrypted value with `sops`.
-3. **Persistence**: any state directory that should survive impermanence goes in `environment.persistence."${config.hostSpec.persistFolder}".directories`.
-4. **Caddy reverse proxy**: add a vhost with the `http://` prefix to disable auto-HTTPS:
+**Pattern A — service lives on bifrost** (the simple case, when the service has no reason to be elsewhere):
+
+1. Define the service in `hosts/bifrost/services/{name}.nix` and bind to `127.0.0.1`. Import in `services/default.nix`.
+2. Secrets: declare under `sops.secrets.…`; add via `sops`.
+3. Persistence: state dirs in `environment.persistence."/persist".directories`.
+4. Add a Caddy handle inside the wildcard vhost in `hosts/bifrost/services/caddy.nix`:
    ```nix
-   services.caddy.virtualHosts."http://myservice.lan.valgrindr.net".extraConfig = ''
+   @myservice host myservice.lan.valgrindr.net
+   handle @myservice {
      reverse_proxy 127.0.0.1:${toString port}
+   }
+   ```
+5. DNS rewrite: add to `services.adguardhome.settings.filtering.rewrites` in `hosts/bifrost/services/dns.nix` pointing at `192.168.1.55`, with `enabled = true;`.
+6. Firewall: extra TCP listeners (beyond Caddy) → `networking.firewall.allowedTCPPorts`.
+7. Deploy bifrost.
+
+**Pattern B — service lives on asgard** (use only when there's a hard reason: PHP-FPM Unix socket, host-network container with local-only deps, etc):
+
+1. Define the service in `hosts/asgard/services/{group}/` and bind to `0.0.0.0:<port>` (or however the service requires for off-host access).
+2. Secrets / persistence: same as Pattern A, on asgard.
+3. **Lock the firewall down**: open the port **only to bifrost** so the wider LAN can't reach it directly:
+   ```nix
+   networking.firewall.extraCommands = ''
+     iptables -I nixos-fw -p tcp --dport ${toString port} -s 192.168.1.55 -j nixos-fw-accept
    '';
    ```
-5. **DNS rewrite**: add an entry to `services.adguardhome.settings.filtering.rewrites` in `hosts/asgard/services/dns.nix` pointing at `192.168.1.54`, with `enabled = true;`.
-6. **Firewall**: if the service exposes ports beyond Caddy (e.g. a TCP listener), open them in `networking.firewall.allowedTCPPorts` — don't rely on the module's `openFirewall` without checking what it actually opens.
-7. **Deploy** with the remote-build pattern above. Verify with `host myservice.lan.valgrindr.net 127.0.0.1` on asgard before claiming success.
+4. On bifrost, add a Caddy handle that proxies to `192.168.1.54:<port>`:
+   ```nix
+   @myservice host myservice.lan.valgrindr.net
+   handle @myservice {
+     reverse_proxy 192.168.1.54:${toString port}
+   }
+   ```
+5. DNS rewrite on bifrost: same as Pattern A but pointing at `192.168.1.54`.
+6. If the service receives `X-Forwarded-For` from Caddy, add `192.168.1.55` to its `trusted_proxies` config (see `home-assistant.nix` on asgard for the pattern).
+7. Deploy both hosts (asgard first to open the firewall hole, then bifrost so the proxy can reach it).
 
 ## Active Hosts
 
-- **midgard**: Main desktop (x86_64-linux, AMD CPU, xanmod kernel, Steam enabled). NixOS-integrated home-manager.
-- **asgard**: Core app server (Proxmox VM on the home LAN, x86_64-linux). Owns the finance stack (Firefly III, Ghostfolio, shared Postgres) and home-automation (Home Assistant, Mosquitto). Reachable at `192.168.1.54` on LAN and `100.64.0.1` on tailnet. Currently still owns networking (AdGuard, headscale, Caddy, DDNS) — those are being migrated to `bifrost`; see `hosts/bifrost/CLAUDE.md` for phase status.
-- **bifrost**: Networking host (Proxmox VM, x86_64-linux). Phase 1: minimal, only tailscale. Will own AdGuard, headscale, Njalla DDNS, and Caddy with LE wildcard cert (`*.lan.valgrindr.net` via Njalla DNS-01) after Phase 2/3 cutover.
+- **midgard**: Main desktop (x86_64-linux, AMD CPU, xanmod kernel, Steam enabled). NixOS-integrated home-manager. Tailnet `100.64.0.1`.
+- **asgard**: App server (Proxmox VM on the home LAN, x86_64-linux). Owns the finance stack (Firefly III, Ghostfolio, shared Postgres) and home-automation (Home Assistant, Mosquitto). Reachable at `192.168.1.54` on LAN and `100.64.0.2` on tailnet.
+- **bifrost**: Networking host (Proxmox VM on the home LAN, x86_64-linux). Owns AdGuard (LAN DNS), headscale (tailnet control plane), Njalla DDNS for `headscale.valgrindr.net`, Caddy edge with LE wildcard cert for `*.lan.valgrindr.net` (Njalla DNS-01), and the tailnet exit-node role. Reachable at `192.168.1.55` on LAN and `100.64.0.3` on tailnet.
 
 ## Important Notes
 
