@@ -6,14 +6,14 @@
   tailscale = lib.getExe pkgs.tailscale;
 in {
   # "server" enables IPv4/IPv6 forwarding sysctls, required for exit-node + subnet-router roles.
-  # The base tailscale.nix snippet defaults to "client" via mkDefault.
+  # The base optional/tailscale.nix defaults to "client" via mkDefault.
   services.tailscale.useRoutingFeatures = lib.mkForce "server";
 
-  # The autoconnect oneshot only runs `tailscale up` on first enroll. To keep
-  # the exit-node flag declarative on every boot/deploy we apply it via
-  # `tailscale set`, which mutates the running daemon without re-auth.
+  # autoconnect only runs `tailscale up` on first enroll. To keep the exit-node
+  # flag declarative on every boot/deploy we apply it via `tailscale set`,
+  # which mutates the running daemon without re-auth.
   systemd.services.tailscale-advertise-exit-node = {
-    description = "Advertise asgard as a Tailscale exit node";
+    description = "Advertise this host as a Tailscale exit node";
     after = [
       "tailscaled.service"
       "tailscale-autoconnect-valgrindr.service"

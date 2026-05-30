@@ -28,6 +28,7 @@
     # ===== Optional Config =====
     #
     ../optional/tailscale.nix
+    ../optional/tailscale-exit-node.nix
 
     #
     # ===== Services =====
