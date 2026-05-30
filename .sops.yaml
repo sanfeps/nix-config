@@ -5,7 +5,7 @@ keys:
     - &asgard age1z2v0al9d5g97c25vqw5kdan7upvyuhm9v9xjqa5fp6xvtjt7xens4hxq7m
     - &midgard age1nryru5p89jl6rg5vdtdfxmupslx5swxwsgvchh5pdma5gsfmws2sc09n0w
     - &bifrost age10qfc7fsd2ze6q29edssw55h5dpfhur8v7gqcrgy6lee4r8ylnassh0yg5v
-    - &raidho age10ltptaxm8vs2x9g6r7595urywwhhsgzhh4f7p2e97dld6q9lyvjsmm2rpm
+    - &raidho age1ku6mfx0z3cqs39erhnkrgze3fngu3sgf76w5w9827weqw2x6aups8p9et0
 creation_rules:
   - path_regex: hosts/common/secrets\.ya?ml$
     key_groups:
