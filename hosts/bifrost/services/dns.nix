@@ -3,12 +3,10 @@
   lib,
   ...
 }: let
-  # During the asgard→bifrost cutover, bifrost owns DNS+Caddy for everything
-  # except firefly (PHP served from disk; stays on asgard until a TCP-fronted
-  # split is in place). All rewrites here are dormant until clients switch to
-  # bifrost as their resolver (Phase 3b).
+  # bifrost owns DNS and TLS termination for every *.lan.valgrindr.net name.
+  # firefly's php_fastcgi socket forces a tiny local Caddy on asgard, but the
+  # public entry point is still bifrost (HTTPS) → asgard:80 (HTTP→FastCGI).
   bifrostIp = "192.168.1.55";
-  asgardIp = "192.168.1.54";
   lanZone = "lan.valgrindr.net";
   webPort = 3000;
   # bcrypt hash for the AdGuard webUI admin (same recipe as asgard).
@@ -75,11 +73,11 @@ in {
             enabled = true;
           }
           {
-            # firefly stays on asgard: PHP served from disk via php_fastcgi
-            # (Caddy reads files locally). Until we split asgard-side Caddy
-            # onto a TCP port, this rewrite must keep pointing at asgard.
+            # firefly's php_fastcgi socket still lives on asgard, but bifrost
+            # terminates TLS and reverse-proxies HTTP to asgard:80 (where the
+            # local Caddy translates HTTP↔FastCGI against the Unix socket).
             domain = "firefly.${lanZone}";
-            answer = asgardIp;
+            answer = bifrostIp;
             enabled = true;
           }
         ];

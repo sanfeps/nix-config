@@ -39,8 +39,9 @@ in {
 
     # Single wildcard vhost: one LE cert covers every *.lan.valgrindr.net
     # subdomain. Per-service routing happens via @host matchers + handle blocks.
-    # Phase 3a state: ghostfolio and home still live on asgard; bifrost just
-    # proxies. adguard goes to the local AdGuard webUI on this host.
+    # adguard is local; ghostfolio/home talk straight to their listener on
+    # asgard; firefly bounces off asgard's tiny Caddy because PHP-FPM speaks
+    # FastCGI over a Unix socket (HTTP can't cross hosts to that socket).
     virtualHosts."*.lan.valgrindr.net".extraConfig = ''
       @adguard host adguard.lan.valgrindr.net
       handle @adguard {
@@ -55,6 +56,11 @@ in {
       @home host home.lan.valgrindr.net
       handle @home {
         reverse_proxy 192.168.1.54:8123
+      }
+
+      @firefly host firefly.lan.valgrindr.net
+      handle @firefly {
+        reverse_proxy 192.168.1.54:80
       }
 
       handle {
