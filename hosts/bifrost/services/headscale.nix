@@ -36,8 +36,9 @@ in {
         override_local_dns = true;
         base_domain = tailnetDomain;
         magic_dns = true;
-        # Bifrost owns LAN DNS post-cutover; push its own IP to tailnet members.
-        nameservers.global = ["192.168.1.55"];
+        # Bifrost owns LAN DNS post-cutover; push its tailnet IP so members keep
+        # working DNS off-LAN (a laptop on foreign wifi can't reach 192.168.1.55).
+        nameservers.global = ["100.64.0.3"];
       };
       prefixes = {
         v4 = "100.64.0.0/10";
