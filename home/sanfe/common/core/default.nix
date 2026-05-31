@@ -92,6 +92,7 @@
 
           # direnv allow state (no per-project caches, esos van en .direnv/ del repo)
           ".local/share/direnv"
+          ".local/share/zoxide"
 
           # Desktop state
           ".config/dconf"
