@@ -121,6 +121,7 @@ We do **not** pre-seed API keys via sops: the *arrs generate them on first boot 
   - **Prowlarr → Sonarr / Radarr** (`/api/v1/applications`) so indexers cascade automatically.
   - **Sonarr → qBittorrent** (`/api/v3/downloadclient`) with category `tv-sonarr`.
   - **Radarr → qBittorrent** with category `movies-radarr`.
+  - **Auth bypass on the *arrs** (`/api/v{3,1}/config/host`) — sets `authenticationMethod=forms` + `authenticationRequired=disabledForLocalAddresses` and seeds an admin user (`admin` / password from sops `media/arr-admin-password`). LAN traffic via Caddy comes from 192.168.1.55 which is RFC1918, so the *arrs treat it as "local" and skip the form; off-LAN (tailnet) hits the form with the seeded creds. **qBittorrent** is handled separately and natively: its `AuthSubnetWhitelist` already covers LAN + tailnet + loopback (`qbittorrent.nix`), no reconciler step needed.
   - **Seerr → Sonarr / Radarr** (`/api/v1/settings/sonarr` and `/api/v1/settings/radarr`) — once Seerr's first-run wizard has been completed once (so `settings.json.initialized = true` and an API key exists). On a brand-new install, log into Seerr once and click through the wizard; subsequent reboots reconcile automatically.
 
 The reconciler is **best-effort**: any failed step is logged and skipped, the unit always exits 0. Inspect `journalctl -u media-bootstrap` after a deploy to see what landed.

@@ -1,4 +1,8 @@
-{pkgs, ...}:
+{
+  pkgs,
+  config,
+  ...
+}:
 # Bootstrap reconciler — runs once per boot, idempotently wires the *arr stack:
 #
 #   Prowlarr → Sonarr  (app registration, so Prowlarr pushes indexers to it)
@@ -69,6 +73,7 @@ let
       """Reconcile *arr-stack inter-service wiring."""
 
       import json
+      import os
       import re
       import sys
       import time
@@ -82,6 +87,14 @@ let
           "prowlarr":    9696,
           "sonarr":      8989,
           "radarr":      7878,
+      }
+      # /api/v3 for Sonarr/Radarr, /api/v1 for Prowlarr (different lineage,
+      # same underlying *arr framework). The /config/host endpoint we use
+      # for the auth bypass takes the same shape across all three.
+      API_VERSIONS = {
+          "sonarr":   "v3",
+          "radarr":   "v3",
+          "prowlarr": "v1",
       }
       # The nixpkgs *arr modules drop config.xml under XDG-style paths.
       # Sonarr keeps the legacy NzbDrone name for back-compat; Radarr uses
@@ -245,6 +258,43 @@ let
                  keys[arr], desired)
 
 
+      def reconcile_arr_auth(arr, api_key):
+          """Disable login prompt for local (LAN) requests and seed the admin
+          user. Modern *arrs require AuthenticationMethod to be set before
+          the WebUI is usable, so we always provide a forms-based login as
+          the fallback for off-LAN access. From bifrost (192.168.1.55 — a
+          private-range IP from the *arr's perspective), the local-address
+          check passes and the form is skipped entirely.
+          """
+          pwd = os.environ.get("ARR_ADMIN_PASSWORD")
+          if not pwd:
+              log(f"{arr}: ARR_ADMIN_PASSWORD not set in env; skipping auth reconcile")
+              return
+          ver = API_VERSIONS[arr]
+          path = f"/api/{ver}/config/host"
+          try:
+              cur = api("GET", PORTS[arr], path, api_key)
+          except urllib.error.HTTPError as e:
+              log(f"{arr}: GET {path} failed ({e.code}); skipping auth")
+              return
+          if not isinstance(cur, dict):
+              log(f"{arr}: unexpected GET {path} payload; skipping auth")
+              return
+          desired = {
+              **cur,
+              "authenticationMethod":   "forms",
+              "authenticationRequired": "disabledForLocalAddresses",
+              "username":               "admin",
+              "password":               pwd,
+              "passwordConfirmation":   pwd,
+          }
+          try:
+              api("PUT", PORTS[arr], path, api_key, desired)
+              log(f"{arr}: auth set to forms / disabledForLocalAddresses (admin seeded)")
+          except urllib.error.HTTPError as e:
+              log(f"{arr}: PUT {path} failed ({e.code}): {e.read()[:200]!r}")
+
+
       def main():
           deadline = time.time() + READY_TIMEOUT
           log("waiting for *arrs + qBittorrent to come up")
@@ -269,6 +319,10 @@ let
                   reconcile_arr_downloadclient(arr, keys)
               else:
                   log(f"{arr} key missing; skipping download-client wiring")
+
+          for arr in ("sonarr", "radarr", "prowlarr"):
+              if arr in keys:
+                  reconcile_arr_auth(arr, keys[arr])
 
           log("done")
 
@@ -490,6 +544,22 @@ let
               sys.exit(0)
     '';
 in {
+  # Admin password shared across the three *arrs. We pre-seed all three
+  # with the same `admin` user so off-LAN access (e.g. tailnet) still has
+  # a working login; on-LAN access bypasses the form entirely via
+  # AuthenticationRequired=DisabledForLocalAddresses.
+  sops.secrets."media/arr-admin-password" = {
+    mode = "0400";
+    # owner unset → root (the reconciler runs as root).
+  };
+
+  sops.templates."media-bootstrap-env" = {
+    content = ''
+      ARR_ADMIN_PASSWORD=${config.sops.placeholder."media/arr-admin-password"}
+    '';
+    mode = "0400";
+  };
+
   systemd.services.media-bootstrap = {
     description = "Reconcile *arr stack inter-service wiring";
     wantedBy = ["multi-user.target"];
@@ -520,6 +590,7 @@ in {
       User = "root";
       Group = "root";
       ExecStart = "${reconciler}";
+      EnvironmentFile = config.sops.templates."media-bootstrap-env".path;
       # Best-effort: never fail the boot graph over reconciliation drift.
       SuccessExitStatus = "0 1";
     };
