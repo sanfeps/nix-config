@@ -6,4 +6,5 @@
   # Container services
   jellyfin = import ./services/containers/jellyfin.nix;
   ghostfolio = import ./services/containers/ghostfolio.nix;
+  headplane = import ./services/containers/headplane.nix;
 }

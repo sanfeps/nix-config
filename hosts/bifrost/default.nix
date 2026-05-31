@@ -29,6 +29,7 @@
     #
     ../optional/tailscale.nix
     ../optional/tailscale-exit-node.nix
+    ../optional/podman.nix
 
     #
     # ===== Services =====

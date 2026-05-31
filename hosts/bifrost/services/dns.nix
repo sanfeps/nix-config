@@ -80,6 +80,16 @@ in {
             answer = bifrostIp;
             enabled = true;
           }
+          {
+            domain = "homepage.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            domain = "headplane.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
         ];
       };
     };
