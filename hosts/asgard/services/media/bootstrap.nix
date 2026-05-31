@@ -59,9 +59,12 @@ let
           "sonarr":      8989,
           "radarr":      7878,
       }
+      # The nixpkgs *arr modules drop config.xml under XDG-style paths.
+      # Sonarr keeps the legacy NzbDrone name for back-compat; Radarr uses
+      # its own. Prowlarr lives at the module's dataDir override.
       CONFIGS = {
-          "sonarr":   "/var/lib/sonarr/config.xml",
-          "radarr":   "/var/lib/radarr/config.xml",
+          "sonarr":   "/var/lib/sonarr/.config/NzbDrone/config.xml",
+          "radarr":   "/var/lib/radarr/.config/Radarr/config.xml",
           "prowlarr": "/srv/media/state/prowlarr/config.xml",
       }
       PING_PATHS = {
