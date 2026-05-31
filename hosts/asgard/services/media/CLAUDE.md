@@ -141,6 +141,7 @@ We do **not** pre-seed API keys via sops: the *arrs generate them on first boot 
 - **Recyclarr** — its own pre-service oneshot (`recyclarr-credentials.service`) extracts and stages keys under `/var/lib/recyclarr-credentials/`, then systemd's `LoadCredential=` feeds them to recyclarr.
 - **`bootstrap.nix` reconciler** — `media-bootstrap.service`, a Python oneshot running as root **inside the mullvad netns** (so `127.0.0.1:<port>` reaches the confined *arrs; PREROUTING DNAT doesn't fire on host-local loopback). Extracts keys live from each `config.xml` (and Seerr's `settings.json`), then idempotently REST-configures:
   - **Prowlarr → Sonarr / Radarr** (`/api/v1/applications`) so indexers cascade automatically.
+  - **Prowlarr public indexers** (`/api/v1/indexer/schema` → `/api/v1/indexer`) — auto-enables a curated allow-list of Cardigann definitions that don't need auth (currently just Internet Archive). New indexers cascade to Sonarr/Radarr via the Apps registration above. Private / API-key indexers are deliberately not declared — they belong in the Prowlarr UI so secrets don't end up in the reconciler.
   - **Sonarr → qBittorrent** (`/api/v3/downloadclient`) with category `tv-sonarr`.
   - **Radarr → qBittorrent** with category `movies-radarr`.
   - **Sonarr / Radarr root folders** (`/api/v3/rootfolder`) — declares `/mnt/nas/media/library/tv` and `/mnt/nas/media/library/movies` as the library targets. The dirs are pre-created by storage.nix as tmpfiles entries, so this works pre-NAS; once the NFS mount lands, the same paths are overlaid by the remote share with no *arr-side change.
@@ -151,7 +152,7 @@ We do **not** pre-seed API keys via sops: the *arrs generate them on first boot 
 The reconciler is **best-effort**: any failed step is logged and skipped, the unit always exits 0. Inspect `journalctl -u media-bootstrap` after a deploy to see what landed.
 
 Scoped out of the reconciler:
-- **Indexers** in Prowlarr — choice is user-specific (public vs private trackers, with/without auth tokens). Add via Prowlarr UI; sync to Sonarr/Radarr happens automatically via the App registrations this reconciler creates.
+- **Private / auth-bearing indexers** — anything requiring API keys, logins, or cookies belongs in the Prowlarr UI so secrets don't leak into Nix-controlled state. The reconciler's `PUBLIC_INDEXERS` list only covers definitions that are free + open + cascade safely from a fresh install.
 - **Quality profiles / custom formats** — owned by recyclarr.
 - **Jellyfin first-run wizard** — Jellyfin's `/Startup/...` API shape changes between releases and isn't worth chasing. Click through it once in the Jellyfin UI (admin user + library paths), then seed the same creds in sops for the Seerr-side automation.
 

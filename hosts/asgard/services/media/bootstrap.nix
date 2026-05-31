@@ -48,9 +48,10 @@
 #     unrelated entries alone).
 #
 # What these scripts intentionally do NOT do:
-#   - Indexers: choice is user-specific (public vs private, with/without
-#     auth tokens). Add via Prowlarr UI; sync to Sonarr/Radarr is automatic
-#     via the Apps registration this reconciler sets up.
+#   - Private / auth-bearing indexers: any indexer requiring an API key or
+#     login belongs in the Prowlarr UI, not in Nix-controlled state (would
+#     leak secrets through the reconciler). The PUBLIC_INDEXERS list below
+#     covers the public+free indexers we want everywhere by default.
 #   - Quality profiles / custom formats: recyclarr owns those.
 #
 # Failure model: each reconciliation step logs and continues. A single
@@ -105,6 +106,13 @@ let
           "sonarr": "/mnt/nas/media/library/tv",
           "radarr": "/mnt/nas/media/library/movies",
       }
+      # Cardigann YAML definition names for public, auth-free indexers we
+      # want auto-enabled in Prowlarr. Anything requiring API keys or login
+      # (private trackers, Jackett-style auth) belongs in the UI — kept out
+      # of declarative state so secrets don't leak through the reconciler.
+      PUBLIC_INDEXERS = [
+          "archive",  # Internet Archive — public domain / CC torrents
+      ]
       PING_PATHS = {
           # All *arrs respond on /ping with 200 once the SignalR/Jellyfin
           # boot dance settles. qBittorrent has no /ping; /api/v2/app/version
@@ -259,6 +267,57 @@ let
                  keys[arr], desired)
 
 
+      def reconcile_prowlarr_indexers(api_key):
+          """Auto-enable a curated list of public Cardigann indexers.
+
+          We GET /api/v1/indexer/schema (the template catalog Prowlarr ships
+          with), pick the entry whose `definitionName` matches each desired
+          indexer, drop the schema's id, and POST it as a real indexer.
+          Prowlarr's Apps sync (already configured via reconcile_prowlarr_apps)
+          then pushes the new indexer to Sonarr/Radarr automatically.
+          """
+          list_url = "/api/v1/indexer"
+          schema_url = "/api/v1/indexer/schema"
+          try:
+              existing = api("GET", PORTS["prowlarr"], list_url, api_key) or []
+          except urllib.error.HTTPError as e:
+              log(f"prowlarr-indexers: GET {list_url} failed ({e.code}); skipping")
+              return
+          existing_defs = {
+              idx.get("definitionName")
+              for idx in existing
+              if idx.get("definitionName")
+          }
+          missing = [d for d in PUBLIC_INDEXERS if d not in existing_defs]
+          if not missing:
+              log("prowlarr-indexers: all targets already present")
+              return
+          try:
+              schemas = api("GET", PORTS["prowlarr"], schema_url, api_key) or []
+          except urllib.error.HTTPError as e:
+              log(f"prowlarr-indexers: GET {schema_url} failed ({e.code}); skipping")
+              return
+          schemas_by_def = {
+              s.get("definitionName"): s
+              for s in schemas
+              if s.get("definitionName")
+          }
+          for d in missing:
+              schema = schemas_by_def.get(d)
+              if not schema:
+                  candidates = [n for n in schemas_by_def if d.lower() in n.lower()]
+                  log(f"prowlarr-indexers: no schema matching definitionName={d!r}; "
+                      f"candidates containing {d!r}: {candidates[:5]}")
+                  continue
+              body = {**schema, "enable": True}
+              body.pop("id", None)
+              try:
+                  api("POST", PORTS["prowlarr"], list_url, api_key, body)
+                  log(f"prowlarr-indexers: added {schema.get('name', d)!r} (definitionName={d})")
+              except urllib.error.HTTPError as e:
+                  log(f"prowlarr-indexers: POST for {d} failed ({e.code}): {e.read()[:300]!r}")
+
+
       def reconcile_arr_root_folder(arr, api_key):
           """Ensure Sonarr/Radarr has its library root folder registered.
           The *arr validates the path exists + is writable; storage.nix
@@ -334,8 +393,9 @@ let
 
           if "prowlarr" in keys:
               reconcile_prowlarr_apps(keys)
+              reconcile_prowlarr_indexers(keys["prowlarr"])
           else:
-              log("prowlarr key missing; skipping app registration")
+              log("prowlarr key missing; skipping app + indexer registration")
 
           for arr in ("sonarr", "radarr"):
               if arr in keys:
