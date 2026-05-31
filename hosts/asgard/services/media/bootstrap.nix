@@ -302,6 +302,18 @@ let
               for s in schemas
               if s.get("definitionName")
           }
+          # Prowlarr requires a non-zero appProfileId on POST. The default profile
+          # ("Standard", id=1) is created on first boot — pick it dynamically so
+          # we don't hardcode the id.
+          try:
+              profiles = api("GET", PORTS["prowlarr"], "/api/v1/appprofile", api_key) or []
+          except urllib.error.HTTPError as e:
+              log(f"prowlarr-indexers: GET /appprofile failed ({e.code}); skipping")
+              return
+          if not profiles:
+              log("prowlarr-indexers: no app profiles found; skipping")
+              return
+          app_profile_id = profiles[0]["id"]
           for d in missing:
               schema = schemas_by_def.get(d)
               if not schema:
@@ -309,7 +321,7 @@ let
                   log(f"prowlarr-indexers: no schema matching definitionName={d!r}; "
                       f"candidates containing {d!r}: {candidates[:5]}")
                   continue
-              body = {**schema, "enable": True}
+              body = {**schema, "enable": True, "appProfileId": app_profile_id}
               body.pop("id", None)
               try:
                   api("POST", PORTS["prowlarr"], list_url, api_key, body)
