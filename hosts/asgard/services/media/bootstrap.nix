@@ -38,7 +38,9 @@
 let
   reconciler =
     pkgs.writers.writePython3 "media-bootstrap" {
-      flakeIgnore = ["E501" "W503"];
+      # E241/E272 = aligned-column whitespace in dict/string literals — intentional.
+      # E501 = long lines; W503 = line break before binary operator (modern PEP 8 prefers it).
+      flakeIgnore = ["E241" "E272" "E501" "W503"];
     } ''
       """Reconcile *arr-stack inter-service wiring."""
 
