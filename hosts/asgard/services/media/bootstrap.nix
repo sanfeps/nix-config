@@ -269,6 +269,16 @@ in {
       "prowlarr.service"
       "qbittorrent.service"
     ];
+    # Run inside the mullvad netns so 127.0.0.1:<port> reaches the confined
+    # services directly. The reconciler only talks to loopback APIs — no
+    # internet egress needed — so the netns is a free win and dodges the
+    # DNAT dance (VPN-Confinement only installs PREROUTING rules, which
+    # don't fire on host-local loopback traffic). Filesystem access (the
+    # config.xml extraction) is unaffected — netns only isolates networking.
+    vpnConfinement = {
+      enable = true;
+      vpnNamespace = "mullvad";
+    };
     serviceConfig = {
       Type = "oneshot";
       User = "root";
