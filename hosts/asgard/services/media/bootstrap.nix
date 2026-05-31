@@ -664,6 +664,10 @@ in {
       ARR_ADMIN_PASSWORD=${config.sops.placeholder."media/arr-admin-password"}
     '';
     mode = "0400";
+    # If the rendered env file changes (i.e. the admin password rotated),
+    # restart the reconciler so it pushes the new password to all three
+    # *arrs without needing `systemctl restart` by hand.
+    restartUnits = ["media-bootstrap.service"];
   };
 
   # Jellyfin admin creds, used by the host-side reconciler to drive Seerr's
@@ -686,6 +690,12 @@ in {
       JELLYFIN_ADMIN_PASSWORD=${config.sops.placeholder."media/jellyfin-admin-password"}
     '';
     mode = "0400";
+    # Same idea as media-bootstrap-env: when the Jellyfin admin creds in
+    # sops change (placeholders → real values, or rotated), `nixos-rebuild
+    # switch` re-runs the reconciler. The wizard auto-run path is gated on
+    # `initialized=false`, so on already-initialized stacks the restart is
+    # a fast no-op apart from re-running the *arr registration loop.
+    restartUnits = ["media-bootstrap-seerr.service"];
   };
 
   systemd.services.media-bootstrap = {
