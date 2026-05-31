@@ -574,15 +574,15 @@ let
               return False
 
           # Step 2: persist the Jellyfin connection (incl. external hostname).
+          # `name` is read-only on Seerr's OpenAPI schema for this endpoint
+          # — it's auto-derived from serverType. Sending it returns 400.
           settings_url = f"http://{HOST}:{SEERR_PORT}/api/v1/settings/jellyfin"
           settings_body = {
-              "name":                       "Jellyfin",
-              "hostname":                   HOST,
-              "port":                       JELLYFIN_PORT,
-              "useSsl":                     False,
-              "urlBase":                    "",
-              "externalHostname":           JELLYFIN_EXTERNAL,
-              "jellyfinForgotPasswordUrl":  "",
+              "hostname":          HOST,
+              "port":              JELLYFIN_PORT,
+              "useSsl":            False,
+              "urlBase":           "",
+              "externalHostname":  JELLYFIN_EXTERNAL,
           }
           try:
               http("POST", settings_url, api_key, settings_body)
