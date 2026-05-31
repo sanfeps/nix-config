@@ -48,15 +48,9 @@
 #     unrelated entries alone).
 #
 # What these scripts intentionally do NOT do:
-#   - Root folders on Sonarr/Radarr: they point at /mnt/nas/media/library
-#     which doesn't exist until the NAS is provisioned. Add the root
-#     folders via UI (or extend this script) once the NAS mount is live.
-#     The Seerr reconciler tolerates missing root folders — it skips the
-#     Sonarr/Radarr registration with a log line instead of erroring.
-#   - Seerr first-run wizard: Seerr requires manual Jellyfin-login + admin-
-#     user creation through its web UI. The seerr reconciler waits for
-#     settings.json.public.initialized == true before doing anything; until
-#     the wizard runs once, this is a no-op.
+#   - Indexers: choice is user-specific (public vs private, with/without
+#     auth tokens). Add via Prowlarr UI; sync to Sonarr/Radarr is automatic
+#     via the Apps registration this reconciler sets up.
 #   - Quality profiles / custom formats: recyclarr owns those.
 #
 # Failure model: each reconciliation step logs and continues. A single
@@ -103,6 +97,13 @@ let
           "sonarr":   "/var/lib/sonarr/.config/NzbDrone/config.xml",
           "radarr":   "/var/lib/radarr/.config/Radarr/config.xml",
           "prowlarr": "/srv/media/state/prowlarr/config.xml",
+      }
+      # Where the *arrs put their imports. Backed by tmpfiles dirs in
+      # storage.nix while the NAS isn't provisioned; once the NFS mount
+      # lands the same paths are overlaid by the remote share.
+      ROOT_FOLDERS = {
+          "sonarr": "/mnt/nas/media/library/tv",
+          "radarr": "/mnt/nas/media/library/movies",
       }
       PING_PATHS = {
           # All *arrs respond on /ping with 200 once the SignalR/Jellyfin
@@ -258,6 +259,28 @@ let
                  keys[arr], desired)
 
 
+      def reconcile_arr_root_folder(arr, api_key):
+          """Ensure Sonarr/Radarr has its library root folder registered.
+          The *arr validates the path exists + is writable; storage.nix
+          pre-creates the dirs as tmpfiles entries, so this works pre-NAS.
+          """
+          path = ROOT_FOLDERS[arr]
+          api_path = f"/api/{API_VERSIONS[arr]}/rootfolder"
+          try:
+              existing = api("GET", PORTS[arr], api_path, api_key) or []
+          except urllib.error.HTTPError as e:
+              log(f"{arr}: GET {api_path} failed ({e.code}); skipping root folder")
+              return
+          if any(rf.get("path") == path for rf in existing):
+              log(f"{arr}: root folder {path} already present")
+              return
+          try:
+              api("POST", PORTS[arr], api_path, api_key, {"path": path})
+              log(f"{arr}: added root folder {path}")
+          except urllib.error.HTTPError as e:
+              log(f"{arr}: POST {api_path} failed ({e.code}): {e.read()[:200]!r}")
+
+
       def reconcile_arr_auth(arr, api_key):
           """Disable login prompt for local (LAN) requests and seed the admin
           user. Modern *arrs require AuthenticationMethod to be set before
@@ -317,8 +340,9 @@ let
           for arr in ("sonarr", "radarr"):
               if arr in keys:
                   reconcile_arr_downloadclient(arr, keys)
+                  reconcile_arr_root_folder(arr, keys[arr])
               else:
-                  log(f"{arr} key missing; skipping download-client wiring")
+                  log(f"{arr} key missing; skipping download-client + root folder wiring")
 
           for arr in ("sonarr", "radarr", "prowlarr"):
               if arr in keys:

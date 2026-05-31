@@ -55,7 +55,7 @@ Recyclarr sits **outside** the namespace because (a) it only talks to localhost 
 - `jellyfin.nix` — outside the netns. Library will point at `/mnt/nas/media/library`; until the NAS lands, comes up empty.
 - `seerr.nix` — outside the netns. Uses `DynamicUser = true` + `StateDirectory = "jellyseerr"` (bind-mount `/var/lib/private/jellyseerr` → `/var/lib/jellyseerr`). Since asgard's rootfs is **not** wiped on boot, this state persists naturally — no `environment.persistence` declaration needed. See header comment in `seerr.nix`.
 - `recyclarr.nix` — outside the netns. Pre-service oneshot stages API keys from each *arr's `config.xml`.
-- `bootstrap.nix` — boot-time reconciler (Python oneshot, root, runs inside the mullvad netns so loopback DNAT works). Idempotently registers Sonarr/Radarr in Prowlarr, configures qBittorrent as the download client on both *arrs, and (once the Seerr setup wizard has been completed once) registers Sonarr/Radarr inside Seerr. Does NOT touch root folders (NAS not provisioned). See "Inter-service wiring" below for the data flow.
+- `bootstrap.nix` — boot-time reconciler (Python oneshot, root, runs inside the mullvad netns so loopback DNAT works). Idempotently registers Sonarr/Radarr in Prowlarr, configures qBittorrent as the download client on both *arrs, declares root folders (`/mnt/nas/media/library/{tv,movies}`, backed by storage.nix tmpfiles dirs pre-NAS), applies the local-address auth bypass, and (once the Seerr wizard has run) registers Sonarr/Radarr inside Seerr. See "Inter-service wiring" below for the data flow.
 
 ## Storage decisions
 
@@ -116,7 +116,7 @@ boot.
 Once the NAS exists at `nas.lan` (or wherever) exporting an NFS share:
 1. Uncomment the `fileSystems."/mnt/nas/media"` block in `storage.nix`.
 2. Verify mount comes up: `systemctl status mnt-nas-media.automount`.
-3. Point Sonarr/Radarr root folders + Jellyfin library at `/mnt/nas/media/library/{tv,movies}` via their respective UIs (the Phase 6 reconciler will eventually automate this).
+3. Sonarr/Radarr root folders are already pointing at `/mnt/nas/media/library/{tv,movies}` (declared by the reconciler). Jellyfin's library paths still need pointing in the UI on first-run (not automated — see Bootstrap §2).
 
 ### 4. Activate the import
 
@@ -143,6 +143,7 @@ We do **not** pre-seed API keys via sops: the *arrs generate them on first boot 
   - **Prowlarr → Sonarr / Radarr** (`/api/v1/applications`) so indexers cascade automatically.
   - **Sonarr → qBittorrent** (`/api/v3/downloadclient`) with category `tv-sonarr`.
   - **Radarr → qBittorrent** with category `movies-radarr`.
+  - **Sonarr / Radarr root folders** (`/api/v3/rootfolder`) — declares `/mnt/nas/media/library/tv` and `/mnt/nas/media/library/movies` as the library targets. The dirs are pre-created by storage.nix as tmpfiles entries, so this works pre-NAS; once the NFS mount lands, the same paths are overlaid by the remote share with no *arr-side change.
   - **Auth bypass on the *arrs** (`/api/v{3,1}/config/host`) — sets `authenticationMethod=forms` + `authenticationRequired=disabledForLocalAddresses` and seeds an admin user (`admin` / password from sops `media/arr-admin-password`). LAN traffic via Caddy comes from 192.168.1.55 which is RFC1918, so the *arrs treat it as "local" and skip the form; off-LAN (tailnet) hits the form with the seeded creds. **qBittorrent** is handled separately and natively: its `AuthSubnetWhitelist` already covers LAN + tailnet + loopback (`qbittorrent.nix`), no reconciler step needed.
   - **Seerr first-run wizard** (`/api/v1/auth/jellyfin` → `/api/v1/settings/jellyfin` → `/api/v1/settings/initialize`) — if `media/jellyfin-admin-{username,password}` are set in sops, the host-side reconciler logs into Jellyfin via Seerr, creates the mirror admin user, persists the Jellyfin connection (including `externalHostname = https://jellyfin.lan.valgrindr.net` for UI deep-links), and flips `public.initialized`. Jellyfin's own first-run wizard is **not** automated — its `/Startup/...` API is version-fragile, so we leave that as a single manual step (see Bootstrap §2). Skip the sops seed and the reconciler logs + moves on; Seerr's wizard can be done manually instead.
   - **Seerr → Sonarr / Radarr** (`/api/v1/settings/sonarr` and `/api/v1/settings/radarr`) — runs after the wizard auto-run (or whenever `settings.json.initialized = true`). Reconciled via the bifrost edge URLs (`sonarr.lan.valgrindr.net:443` / `radarr.lan.valgrindr.net:443`) because Seerr lives on the host and PREROUTING DNAT to the netns only fires for incoming connections.
@@ -150,7 +151,7 @@ We do **not** pre-seed API keys via sops: the *arrs generate them on first boot 
 The reconciler is **best-effort**: any failed step is logged and skipped, the unit always exits 0. Inspect `journalctl -u media-bootstrap` after a deploy to see what landed.
 
 Scoped out of the reconciler:
-- **Root folders** on Sonarr/Radarr — they need `/mnt/nas/media/library/{tv,movies}` to exist. Add via UI (or extend the reconciler) once the NAS lands.
+- **Indexers** in Prowlarr — choice is user-specific (public vs private trackers, with/without auth tokens). Add via Prowlarr UI; sync to Sonarr/Radarr happens automatically via the App registrations this reconciler creates.
 - **Quality profiles / custom formats** — owned by recyclarr.
 - **Jellyfin first-run wizard** — Jellyfin's `/Startup/...` API shape changes between releases and isn't worth chasing. Click through it once in the Jellyfin UI (admin user + library paths), then seed the same creds in sops for the Seerr-side automation.
 
