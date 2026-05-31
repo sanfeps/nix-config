@@ -53,9 +53,9 @@ Recyclarr sits **outside** the namespace because (a) it only talks to localhost 
 - `prowlarr.nix` — uses the module's `dataDir` override (`/srv/media/state/prowlarr`) as the **only sane persistence path**. See "DynamicUser persistence trap" below.
 - `sonarr.nix` / `radarr.nix` — default `dataDir`; persist `/var/lib/{sonarr,radarr}` (static users, no trap). In the netns.
 - `jellyfin.nix` — outside the netns. Library will point at `/mnt/nas/media/library`; until the NAS lands, comes up empty.
-- `seerr.nix` — outside the netns. **No persistence** (StateDirectory is `jellyseerr` and there's no `dataDir` escape hatch — see notes).
+- `seerr.nix` — outside the netns. Uses `DynamicUser = true` + `StateDirectory = "jellyseerr"` (bind-mount `/var/lib/private/jellyseerr` → `/var/lib/jellyseerr`). Since asgard's rootfs is **not** wiped on boot, this state persists naturally — no `environment.persistence` declaration needed. See header comment in `seerr.nix`.
 - `recyclarr.nix` — outside the netns. Pre-service oneshot stages API keys from each *arr's `config.xml`.
-- `bootstrap.nix` — boot-time reconciler (Python oneshot, root). Idempotently registers Sonarr/Radarr in Prowlarr and configures qBittorrent as the download client on both *arrs. Does NOT touch Seerr (impermanence trap) or root folders (NAS not provisioned). See "Inter-service wiring" below for the data flow.
+- `bootstrap.nix` — boot-time reconciler (Python oneshot, root, runs inside the mullvad netns so loopback DNAT works). Idempotently registers Sonarr/Radarr in Prowlarr, configures qBittorrent as the download client on both *arrs, and (once the Seerr setup wizard has been completed once) registers Sonarr/Radarr inside Seerr. Does NOT touch root folders (NAS not provisioned). See "Inter-service wiring" below for the data flow.
 
 ## Storage decisions
 
@@ -64,15 +64,17 @@ Recyclarr sits **outside** the namespace because (a) it only talks to localhost 
 - **`/srv/media/state/prowlarr`** — only because the upstream `prowlarr` module uses `DynamicUser` (see below).
 - **`/var/lib/<service>`** for static-user services: persisted via `environment.persistence."${config.hostSpec.persistFolder}".directories`.
 
-## DynamicUser persistence trap (very important)
+## DynamicUser + persistence (asgard caveat)
 
-Three modules in this stack use `DynamicUser = true`:
+Three modules in this stack use `DynamicUser = true`. On **midgard** (wipe-on-boot rootfs from `btrfs-luks-impermanence-disk.nix`) this combination is genuinely tricky: `StateDirectory` creates `/var/lib/private/<svc>` and bind-mounts it to `/var/lib/<svc>` on every boot, but a fresh boot wipes the underlying subvolume, and naïvely declaring `environment.persistence."/persist".directories = ["/var/lib/<svc>"]` races with systemd's first-boot migration logic. On asgard (this host) the rootfs is **not** wiped (`btrfs-disk-uefi.nix`, no `postDeviceCommands`), so `/var/lib/private/<svc>` just sits there persistently and the trap is moot. The three modules and how we treat them here:
 
-- `services.prowlarr` — module **does** expose `dataDir`. Setting it to a non-default path causes the module to create a bind mount instead of relying on `StateDirectory`. We use `/srv/media/state/prowlarr`. ✅ Persistence works.
-- `services.seerr` — module **does not** expose `dataDir`. Overriding `configDir` breaks startup (nixpkgs issue #457739). Naïvely persisting `/var/lib/jellyseerr` collides with systemd's first-boot `/var/lib/private` migration. ⚠️ **Leave Seerr ephemeral.** Request history is lost on reboot — known limitation. A future `/var/lib/private` impermanence recipe (AdGuard precedent in the root CLAUDE.md) will fix this.
-- AdGuard on bifrost has the same shape — it's the canonical example to crib from once a fix lands.
+- `services.prowlarr` — module **does** expose `dataDir`. We override to `/srv/media/state/prowlarr` for two reasons: (a) it's the only sane way to extract the API key reliably (`/var/lib/private/<dynamic-uid>/...` is harder to reason about), and (b) it co-locates Prowlarr state with the other media state under `/srv/media`. ✅ Persistence works.
+- `services.seerr` — module **does not** expose `dataDir`. Overriding `configDir` breaks startup (nixpkgs issue #457739). We accept the `/var/lib/private/jellyseerr` location as-is; on asgard it persists naturally. **No `environment.persistence` declaration**, no migration race. The reconciler reads `settings.json` from `/var/lib/private/jellyseerr/settings.json` (root can traverse it).
+- AdGuard on bifrost has the same shape; same reasoning — bifrost's rootfs is also non-wipe, so the "leave it ephemeral" note in the root CLAUDE.md is overly cautious for that host.
 
-The other modules (`qbittorrent`, `sonarr`, `radarr`, `jellyfin`, `recyclarr`) use **static** users, so straight `environment.persistence` works.
+The other modules (`qbittorrent`, `sonarr`, `radarr`, `jellyfin`, `recyclarr`) use **static** users; `environment.persistence` is also unnecessary on asgard for the same rootfs-isn't-wiped reason, but the explicit declarations remain in place as documentation of intent and to keep the modules portable to wipe-on-boot hosts.
+
+**If/when any of these services moves to a wipe-on-boot host (midgard or future), revisit this section** — the trap is real on those layouts.
 
 ## Bootstrap (one-time, manual)
 
@@ -115,17 +117,18 @@ The *arrs talk to each other (Prowlarr syncs indexers to Sonarr/Radarr; Sonarr/R
 We do **not** pre-seed API keys via sops: the *arrs generate them on first boot inside their `config.xml`. Two consumers read those keys back:
 
 - **Recyclarr** — its own pre-service oneshot (`recyclarr-credentials.service`) extracts and stages keys under `/var/lib/recyclarr-credentials/`, then systemd's `LoadCredential=` feeds them to recyclarr.
-- **`bootstrap.nix` reconciler** — `media-bootstrap.service`, a Python oneshot running as root after all *arrs come up. Extracts keys live from each `config.xml`, then idempotently REST-configures:
+- **`bootstrap.nix` reconciler** — `media-bootstrap.service`, a Python oneshot running as root **inside the mullvad netns** (so `127.0.0.1:<port>` reaches the confined *arrs; PREROUTING DNAT doesn't fire on host-local loopback). Extracts keys live from each `config.xml` (and Seerr's `settings.json`), then idempotently REST-configures:
   - **Prowlarr → Sonarr / Radarr** (`/api/v1/applications`) so indexers cascade automatically.
   - **Sonarr → qBittorrent** (`/api/v3/downloadclient`) with category `tv-sonarr`.
   - **Radarr → qBittorrent** with category `movies-radarr`.
+  - **Seerr → Sonarr / Radarr** (`/api/v1/settings/sonarr` and `/api/v1/settings/radarr`) — once Seerr's first-run wizard has been completed once (so `settings.json.initialized = true` and an API key exists). On a brand-new install, log into Seerr once and click through the wizard; subsequent reboots reconcile automatically.
 
 The reconciler is **best-effort**: any failed step is logged and skipped, the unit always exits 0. Inspect `journalctl -u media-bootstrap` after a deploy to see what landed.
 
 Scoped out of the reconciler:
-- **Seerr** — its state directory hits the DynamicUser impermanence trap (see `seerr.nix`). Configuring Seerr declaratively today just gets wiped on the next reboot, so wire it manually in the UI and accept the limitation.
 - **Root folders** on Sonarr/Radarr — they need `/mnt/nas/media/library/{tv,movies}` to exist. Add via UI (or extend the reconciler) once the NAS lands.
 - **Quality profiles / custom formats** — owned by recyclarr.
+- **Seerr first-run wizard** — Seerr requires Jellyfin login + admin user creation through its UI on first boot. After that, the reconciler can read `settings.json` and wire Sonarr/Radarr automatically.
 
 If the reconciler ever supersedes recyclarr's credential staging, the two credentials directories can be unified. For now, each owns its own — minor duplication is fine.
 
