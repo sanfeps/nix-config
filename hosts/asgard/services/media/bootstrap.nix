@@ -365,10 +365,11 @@ let
           "sonarr":   "/var/lib/sonarr/.config/NzbDrone/config.xml",
           "radarr":   "/var/lib/radarr/.config/Radarr/config.xml",
       }
-      # Seerr's settings.json lives under the DynamicUser bind-mount.
-      # Root traversal works fine (DynamicUser only changes ownership, not
-      # mount visibility).
-      SEERR_SETTINGS = "/var/lib/private/jellyseerr/settings.json"
+      # Seerr's settings.json lives under the DynamicUser bind-mount, inside
+      # a `config/` subdir (legacy from jellyseerr's docker container where
+      # the bind-mount target was /app/config). Root traversal works fine —
+      # DynamicUser only changes ownership, not mount visibility.
+      SEERR_SETTINGS = "/var/lib/private/jellyseerr/config/settings.json"
 
       # Where Seerr should reach Sonarr/Radarr at runtime. NOT host-local —
       # Seerr is on the host, *arrs are in the netns, no OUTPUT-chain DNAT,
