@@ -45,7 +45,6 @@ let
       """Reconcile *arr-stack inter-service wiring."""
 
       import json
-      import os
       import re
       import sys
       import time
