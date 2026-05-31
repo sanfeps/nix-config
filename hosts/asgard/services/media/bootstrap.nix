@@ -111,7 +111,7 @@ let
       # (private trackers, Jackett-style auth) belongs in the UI — kept out
       # of declarative state so secrets don't leak through the reconciler.
       PUBLIC_INDEXERS = [
-          "archive",  # Internet Archive — public domain / CC torrents
+          "internetarchive",  # Internet Archive — public domain / CC torrents
       ]
       PING_PATHS = {
           # All *arrs respond on /ping with 200 once the SignalR/Jellyfin
