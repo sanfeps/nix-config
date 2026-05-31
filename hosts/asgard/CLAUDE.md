@@ -21,6 +21,8 @@ All live under `services/` and are wired in `services/default.nix`:
 - **`home-automation/`** — Home Assistant + Mosquitto.
   - Home Assistant binds to `0.0.0.0:8123`. Caddy on bifrost reverse-proxies `http://home.lan.valgrindr.net` → `192.168.1.54:8123`. Firewall on asgard restricts 8123 to source `192.168.1.55` only.
   - Home Assistant config has `bifrost (192.168.1.55)` in `trusted_proxies` so `X-Forwarded-For` headers surface real client IPs.
+- **`immich.nix`** — self-hosted photo/video library at `https://immich.lan.valgrindr.net`. Native NixOS module, binds `0.0.0.0:2283`, Pattern-B firewall to bifrost. Photo library lives at `/mnt/nas/immich`, which is **pre-NAS** backed by a local tmpfiles dir (see header of the file); once the NAS lands, uncomment the fileSystems block and drop the tmpfiles entries — the same path gets overlaid by NFS with no service-side change. Service state (DB rows, thumbnails, encoded video, ML models) lives under `/var/lib/immich` (persisted), photo originals under the mediaLocation. Machine-learning is on by default — CPU-heavy, revisit if asgard struggles.
+- **`media/`** — see `services/media/CLAUDE.md` for the full media stack (Jellyfin, Seerr, Sonarr/Radarr/Prowlarr in a Mullvad netns, qBittorrent, Recyclarr).
 
 ## Tailnet client
 

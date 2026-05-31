@@ -120,6 +120,11 @@ in {
             answer = bifrostIp;
             enabled = true;
           }
+          {
+            domain = "immich.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
         ];
       };
     };

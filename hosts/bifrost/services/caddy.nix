@@ -63,6 +63,11 @@ in {
         reverse_proxy 192.168.1.54:80
       }
 
+      @immich host immich.lan.valgrindr.net
+      handle @immich {
+        reverse_proxy 192.168.1.54:2283
+      }
+
       handle {
         respond "bifrost edge - unknown subdomain" 404
       }

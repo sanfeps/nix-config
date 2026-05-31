@@ -71,6 +71,13 @@ in {
               icon = "home-assistant.png";
             };
           }
+          {
+            "Immich" = {
+              href = "https://immich.lan.valgrindr.net";
+              description = "Photo / video library";
+              icon = "immich.png";
+            };
+          }
         ];
       }
       {
