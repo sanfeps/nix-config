@@ -19,6 +19,8 @@
     fd # Better find
     httpie # Better curl
     jq # JSON pretty printer and manipulator
+    timer # For pomodoro things
+    viddy # better watch
 
     nixd # Nix LSP
     alejandra # Nix formatter
