@@ -576,6 +576,10 @@ let
           }
           if arr == "sonarr":
               body["enableSeasonFolders"] = True
+          if arr == "radarr":
+              # Seerr requires this on Radarr registration. "released" means
+              # only consider a movie monitored once it has a digital release.
+              body["minimumAvailability"] = "released"
 
           list_url = f"http://{HOST}:{SEERR_PORT}/api/v1/settings/{arr}"
           try:
@@ -586,7 +590,10 @@ let
           by_name = {e.get("name"): e for e in existing}
           if body["name"] in by_name:
               existing_entry = by_name[body["name"]]
-              merged = {**existing_entry, **body, "id": existing_entry["id"]}
+              # id lives in the URL on PUT — Seerr's OpenAPI validator rejects
+              # it in the body even though GET returns it.
+              merged = {**existing_entry, **body}
+              merged.pop("id", None)
               try:
                   http("PUT", f"{list_url}/{existing_entry['id']}", seerr_key, merged)
                   log(f"seerr: updated {arr} registration")
