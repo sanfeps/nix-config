@@ -73,6 +73,52 @@ in {
           }
         ];
       }
+      {
+        "Media (asgard)" = [
+          {
+            "Jellyfin" = {
+              href = "https://jellyfin.lan.valgrindr.net";
+              description = "Playback server";
+              icon = "jellyfin.png";
+            };
+          }
+          {
+            "Seerr" = {
+              href = "https://seerr.lan.valgrindr.net";
+              description = "Request manager";
+              icon = "jellyseerr.png";
+            };
+          }
+          {
+            "qBittorrent" = {
+              href = "https://qbittorrent.lan.valgrindr.net";
+              description = "Torrent client (VPN-confined)";
+              icon = "qbittorrent.png";
+            };
+          }
+          {
+            "Prowlarr" = {
+              href = "https://prowlarr.lan.valgrindr.net";
+              description = "Indexer manager";
+              icon = "prowlarr.png";
+            };
+          }
+          {
+            "Sonarr" = {
+              href = "https://sonarr.lan.valgrindr.net";
+              description = "TV automation";
+              icon = "sonarr.png";
+            };
+          }
+          {
+            "Radarr" = {
+              href = "https://radarr.lan.valgrindr.net";
+              description = "Movie automation";
+              icon = "radarr.png";
+            };
+          }
+        ];
+      }
     ];
 
     widgets = [

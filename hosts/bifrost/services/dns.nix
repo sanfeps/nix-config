@@ -90,6 +90,36 @@ in {
             answer = bifrostIp;
             enabled = true;
           }
+          {
+            domain = "jellyfin.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            domain = "seerr.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            domain = "qbittorrent.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            domain = "prowlarr.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            domain = "sonarr.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
+            domain = "radarr.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
         ];
       };
     };

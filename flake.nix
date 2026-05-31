@@ -47,6 +47,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Network-namespace VPN confinement for the asgard media stack.
+    # API: vpnNamespaces.<name> + systemd.services.<name>.vpnConfinement.
+    # No releases upstream — flake.lock pins to a commit. Re-evaluate the pin
+    # whenever upstream activity slows or DNS-leak handling needs review.
+    # Upstream flake has no `nixpkgs` input, so no `follows` here.
+    vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
+
     # nix-gaming = {
     #   url = "github:fufexan/nix-gaming";
     #   inputs.nixpkgs.follows = "nixpkgs";

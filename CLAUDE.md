@@ -159,9 +159,6 @@ Declarative Podman container services are managed through custom NixOS modules l
 
 **Base Configuration**: `hosts/optional/podman.nix` provides Podman with Docker compatibility, DNS-enabled networking, docker socket for rootless support, and management tools (podman-compose, podman-tui). This must be explicitly imported in hosts that need container support.
 
-**Available Container Modules**:
-- **Jellyfin** (`services.containers.jellyfin`): Media server with hardware acceleration support
-
 **Module Pattern**: Each container service follows a standard pattern:
 1. Module defines options in `modules/nixos/services/containers/{service}.nix`
 2. Module is exported in `modules/nixos/default.nix`
@@ -200,21 +197,6 @@ Declarative Podman container services are managed through custom NixOS modules l
 2. Export module in `modules/nixos/default.nix`: `{service} = import ./services/containers/{service}.nix;`
 3. Enable in host: `services.containers.{service}.enable = true;` with desired configuration
 4. Import `hosts/optional/podman.nix` in host if not already imported
-
-**Example**:
-```nix
-# In hosts/asgard/default.nix
-{
-  imports = [ ../optional/podman.nix ];
-
-  services.containers.jellyfin = {
-    enable = true;
-    port = 8096;
-    mediaPath = "/mnt/media";
-    openFirewall = true;
-  };
-}
-```
 
 ### Working with Secrets
 
