@@ -6,7 +6,7 @@ Networking host. Proxmox VM on the home LAN. The rainbow bridge between Asgard (
 - Tailnet IP: `100.64.0.3` (`yggdrasil` tailnet, base domain `ts.yggdrasil.lo`)
 - Public DNS: `headscale.valgrindr.net` (Njalla A record, updated by `services/ddns.nix`)
 - LAN zone: `lan.valgrindr.net` (resolved locally by AdGuard, not public; wildcard LE cert covers `*.lan.valgrindr.net` via Njalla DNS-01)
-- Hardware: serial console preserved (`console=ttyS0`); root on `/dev/sda` with btrfs + impermanence (VM, no LUKS).
+- Hardware: serial console preserved (`console=ttyS0`); root on `/dev/sda` with `btrfs-disk-uefi.nix` (plain BTRFS subvolumes, **no wipe-on-boot**, no LUKS — VM). Same caveats as asgard: `/persist` is a convention, state under `/var/lib/<svc>` persists by virtue of the rootfs not being wiped. See the root CLAUDE.md for the per-host impermanence breakdown.
 
 ## Services
 

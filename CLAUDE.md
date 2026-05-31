@@ -16,7 +16,7 @@ Context lives in nested `CLAUDE.md` files. Claude Code auto-loads the root file 
 
 ## Overview
 
-This is a personal NixOS configuration repository using a flake-based setup with home-manager integration. The configuration uses an impermanence strategy with BTRFS and LUKS encryption for most hosts.
+This is a personal NixOS configuration repository using a flake-based setup with home-manager integration. The workstation (midgard) uses wipe-on-boot impermanence with BTRFS + LUKS; the Proxmox-VM app servers (asgard, bifrost) use plain BTRFS subvolumes with `/persist` as a convention but no rootfs wipe.
 
 ## Build and Deployment Commands
 
@@ -108,7 +108,12 @@ direnv allow
 ### Key Architectural Patterns
 
 #### Impermanence Strategy
-All hosts use impermanence with `/persist` as the persistence root. The root filesystem is ephemeral and gets wiped on reboot. Critical data is persisted through explicit declarations in home-manager and NixOS configurations.
+The `/persist` root is a project-wide convention, but **wipe-on-boot impermanence is per-host** and gated by which disk layout the host imports from `hosts/common/disks/`:
+
+- **`btrfs-luks-impermanence-disk.nix`** — wipes `/` on every boot via `boot.initrd.postDeviceCommands` (`btrfs subvolume delete` of the root subvol, then re-create). The root filesystem is genuinely ephemeral. Currently used by **midgard** only.
+- **`btrfs-disk-uefi.nix`** — plain BTRFS subvolumes (`/`, `/nix`, `/persist`), no wipe logic. Used by the Proxmox VMs (**asgard**, **bifrost**). The `/persist` convention is followed for documentation/portability — `environment.persistence."/persist"` declarations and `hosts/common/core/optin-persistence.nix` still work — but bind-mounting persistent state onto a persistent rootfs is a no-op. Anything written to `/var/lib/<svc>` survives reboots regardless of whether it's declared in `environment.persistence`.
+
+When porting state-handling notes between hosts, check the disk layout first: hacks needed on midgard (e.g. `DynamicUser`'s `/var/lib/private` collision with bind-mounts) are non-issues on asgard/bifrost.
 
 Persistence configuration:
 - NixOS: `hosts/common/core/optin-persistence.nix`
@@ -338,7 +343,7 @@ Services run on the host that best fits them; ingress is always bifrost. Two pat
 ## Important Notes
 
 - The configuration uses systemd-boot with a 3-second timeout.
-- BTRFS subvolumes are used for snapshots and impermanence.
-- All hosts use LUKS encryption for the root partition.
+- BTRFS subvolumes are used everywhere; wipe-on-boot is per-host (see Impermanence Strategy above).
+- LUKS encryption is used on bare-metal (midgard); Proxmox VMs (asgard, bifrost) skip LUKS — the host already encrypts the underlying storage.
 - The kernel is customized per-host (midgard uses `linux_xanmod_latest`).
 - Cross-compilation is enabled for aarch64-linux and i686-linux on capable hosts.

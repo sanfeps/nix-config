@@ -4,7 +4,7 @@ Core app server. Proxmox VM on the home LAN.
 
 - LAN IP: `192.168.1.54` (DHCP)
 - Tailnet IP: `100.64.0.2` (`yggdrasil` tailnet, base domain `ts.yggdrasil.lo`, control plane on bifrost)
-- Hardware: serial console preserved (`console=ttyS0`) for Proxmox recovery; root on `/dev/sda` with btrfs + impermanence (no LUKS — this is a VM).
+- Hardware: serial console preserved (`console=ttyS0`) for Proxmox recovery; root on `/dev/sda` with `btrfs-disk-uefi.nix` (plain BTRFS subvolumes, **no wipe-on-boot**, no LUKS — this is a VM). The `/persist` convention is still honoured for portability, but `/var/lib/<svc>` survives reboots regardless of `environment.persistence` declarations — see the root CLAUDE.md for the per-host impermanence breakdown.
 
 Asgard used to also own networking (AdGuard, headscale, DDNS, exit-node). All of that moved to bifrost in the Phase 3 cutover. Asgard is now strictly an app server.
 
