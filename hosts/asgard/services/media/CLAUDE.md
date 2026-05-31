@@ -89,14 +89,36 @@ The stack is fully declarative, but two things need a manual seed before the imp
 sops hosts/asgard/secrets.yaml   # add key: media/mullvad-wg-conf, value: full conf as multiline YAML
 ```
 
-### 2. NAS mount (skip until NAS is provisioned)
+### 2. Jellyfin admin creds (for Seerr wizard automation)
+
+Jellyfin's first-run wizard is left manual on purpose — its `/Startup/...` API
+shape changes between releases and isn't worth chasing. Walk through it once in
+the Jellyfin UI (create an admin user, point libraries at
+`/mnt/nas/media/library/{tv,movies}`). State persists naturally.
+
+Then seed the same creds in sops so the boot-time reconciler can drive Seerr's
+own first-run wizard via `/api/v1/auth/jellyfin`:
+
+```bash
+sops hosts/asgard/secrets.yaml
+# add:
+#   media/jellyfin-admin-username: <jellyfin admin user>
+#   media/jellyfin-admin-password: <jellyfin admin password>
+```
+
+Skip this if you don't mind clicking through Seerr's wizard manually too — the
+reconciler logs the missing creds and moves on. Once the wizard has run once
+(by any path), the *arr registration inside Seerr is fully reconciled on every
+boot.
+
+### 3. NAS mount (skip until NAS is provisioned)
 
 Once the NAS exists at `nas.lan` (or wherever) exporting an NFS share:
 1. Uncomment the `fileSystems."/mnt/nas/media"` block in `storage.nix`.
 2. Verify mount comes up: `systemctl status mnt-nas-media.automount`.
 3. Point Sonarr/Radarr root folders + Jellyfin library at `/mnt/nas/media/library/{tv,movies}` via their respective UIs (the Phase 6 reconciler will eventually automate this).
 
-### 3. Activate the import
+### 4. Activate the import
 
 Uncomment `./media` in `hosts/asgard/services/default.nix` and deploy. The Mullvad namespace comes up immediately at activation; per-service WebUIs become reachable through the bifrost Caddy handles as soon as each unit starts.
 
@@ -122,14 +144,15 @@ We do **not** pre-seed API keys via sops: the *arrs generate them on first boot 
   - **Sonarr → qBittorrent** (`/api/v3/downloadclient`) with category `tv-sonarr`.
   - **Radarr → qBittorrent** with category `movies-radarr`.
   - **Auth bypass on the *arrs** (`/api/v{3,1}/config/host`) — sets `authenticationMethod=forms` + `authenticationRequired=disabledForLocalAddresses` and seeds an admin user (`admin` / password from sops `media/arr-admin-password`). LAN traffic via Caddy comes from 192.168.1.55 which is RFC1918, so the *arrs treat it as "local" and skip the form; off-LAN (tailnet) hits the form with the seeded creds. **qBittorrent** is handled separately and natively: its `AuthSubnetWhitelist` already covers LAN + tailnet + loopback (`qbittorrent.nix`), no reconciler step needed.
-  - **Seerr → Sonarr / Radarr** (`/api/v1/settings/sonarr` and `/api/v1/settings/radarr`) — once Seerr's first-run wizard has been completed once (so `settings.json.initialized = true` and an API key exists). On a brand-new install, log into Seerr once and click through the wizard; subsequent reboots reconcile automatically.
+  - **Seerr first-run wizard** (`/api/v1/auth/jellyfin` → `/api/v1/settings/jellyfin` → `/api/v1/settings/initialize`) — if `media/jellyfin-admin-{username,password}` are set in sops, the host-side reconciler logs into Jellyfin via Seerr, creates the mirror admin user, persists the Jellyfin connection (including `externalHostname = https://jellyfin.lan.valgrindr.net` for UI deep-links), and flips `public.initialized`. Jellyfin's own first-run wizard is **not** automated — its `/Startup/...` API is version-fragile, so we leave that as a single manual step (see Bootstrap §2). Skip the sops seed and the reconciler logs + moves on; Seerr's wizard can be done manually instead.
+  - **Seerr → Sonarr / Radarr** (`/api/v1/settings/sonarr` and `/api/v1/settings/radarr`) — runs after the wizard auto-run (or whenever `settings.json.initialized = true`). Reconciled via the bifrost edge URLs (`sonarr.lan.valgrindr.net:443` / `radarr.lan.valgrindr.net:443`) because Seerr lives on the host and PREROUTING DNAT to the netns only fires for incoming connections.
 
 The reconciler is **best-effort**: any failed step is logged and skipped, the unit always exits 0. Inspect `journalctl -u media-bootstrap` after a deploy to see what landed.
 
 Scoped out of the reconciler:
 - **Root folders** on Sonarr/Radarr — they need `/mnt/nas/media/library/{tv,movies}` to exist. Add via UI (or extend the reconciler) once the NAS lands.
 - **Quality profiles / custom formats** — owned by recyclarr.
-- **Seerr first-run wizard** — Seerr requires Jellyfin login + admin user creation through its UI on first boot. After that, the reconciler can read `settings.json` and wire Sonarr/Radarr automatically.
+- **Jellyfin first-run wizard** — Jellyfin's `/Startup/...` API shape changes between releases and isn't worth chasing. Click through it once in the Jellyfin UI (admin user + library paths), then seed the same creds in sops for the Seerr-side automation.
 
 If the reconciler ever supersedes recyclarr's credential staging, the two credentials directories can be unified. For now, each owns its own — minor duplication is fine.
 

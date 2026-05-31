@@ -346,6 +346,7 @@ let
       """Reconcile Seerr ↔ Sonarr / Radarr (host-side, outside the netns)."""
 
       import json
+      import os
       import re
       import sys
       import time
@@ -355,6 +356,8 @@ let
 
       HOST = "127.0.0.1"
       SEERR_PORT = 5055
+      JELLYFIN_PORT = 8096
+      JELLYFIN_EXTERNAL = "https://jellyfin.lan.valgrindr.net"
 
       # Sonarr/Radarr config.xml — same paths as the netns-side reconciler,
       # repeated here so this script stands alone.
@@ -506,6 +509,99 @@ let
                   log(f"seerr: POST {arr} failed ({e.code}): {e.read()[:200]!r}")
 
 
+      def reconcile_seerr_wizard():
+          """Replicate Seerr's first-run wizard via API:
+            1. POST /api/v1/auth/jellyfin — log into Jellyfin and create the
+               Seerr admin user mirroring it. Required for the wizard to
+               consider itself "done".
+            2. POST /api/v1/settings/jellyfin — persist the Jellyfin
+               connection. /auth/jellyfin saves a partial copy already, but
+               this also seeds the externalHostname used by Seerr's UI
+               links back to Jellyfin.
+            3. POST /api/v1/settings/initialize — flip public.initialized.
+
+          Idempotent: re-running just logs the existing admin in.
+          """
+          jf_user = os.environ.get("JELLYFIN_ADMIN_USERNAME")
+          jf_pwd = os.environ.get("JELLYFIN_ADMIN_PASSWORD")
+          if not (jf_user and jf_pwd):
+              log("seerr: Jellyfin admin creds missing in env; cannot auto-run wizard. "
+                  "Add media/jellyfin-admin-{username,password} to sops, or finish "
+                  "Seerr's wizard manually in the web UI.")
+              return False
+
+          # Step 1: log into Jellyfin via Seerr → creates / authenticates
+          # the mirror admin user in Seerr's DB.
+          auth_url = f"http://{HOST}:{SEERR_PORT}/api/v1/auth/jellyfin"
+          auth_body = {
+              "username":   jf_user,
+              "password":   jf_pwd,
+              "email":      f"{jf_user}@local",
+              "hostname":   HOST,
+              "port":       JELLYFIN_PORT,
+              "useSsl":     False,
+              "urlBase":    "",
+              "serverType": 2,  # 1 = Plex, 2 = Jellyfin (Jellyseerr convention)
+          }
+          try:
+              urllib.request.urlopen(
+                  urllib.request.Request(
+                      auth_url,
+                      data=json.dumps(auth_body).encode(),
+                      headers={"Content-Type": "application/json"},
+                      method="POST",
+                  ),
+                  timeout=30,
+              ).read()
+              log("seerr: /api/v1/auth/jellyfin succeeded (mirror admin set up)")
+          except urllib.error.HTTPError as e:
+              log(f"seerr: /api/v1/auth/jellyfin failed ({e.code}): {e.read()[:300]!r}. "
+                  f"Verify Jellyfin is reachable at {HOST}:{JELLYFIN_PORT} and that "
+                  "the seeded creds match a Jellyfin admin account.")
+              return False
+          except (urllib.error.URLError, TimeoutError, OSError) as e:
+              log(f"seerr: cannot reach Seerr at {auth_url} ({e})")
+              return False
+
+          # Reload settings to pick up the apiKey that may have just been
+          # generated, and to know whether /auth/jellyfin already flipped
+          # initialized.
+          try:
+              api_key, initialized = extract_seerr_state()
+          except Exception as e:
+              log(f"seerr: post-auth state read failed — {e}")
+              return False
+
+          # Step 2: persist the Jellyfin connection (incl. external hostname).
+          settings_url = f"http://{HOST}:{SEERR_PORT}/api/v1/settings/jellyfin"
+          settings_body = {
+              "name":                       "Jellyfin",
+              "hostname":                   HOST,
+              "port":                       JELLYFIN_PORT,
+              "useSsl":                     False,
+              "urlBase":                    "",
+              "externalHostname":           JELLYFIN_EXTERNAL,
+              "jellyfinForgotPasswordUrl":  "",
+          }
+          try:
+              http("POST", settings_url, api_key, settings_body)
+              log("seerr: Jellyfin connection settings persisted")
+          except urllib.error.HTTPError as e:
+              log(f"seerr: POST /api/v1/settings/jellyfin failed ({e.code}): {e.read()[:200]!r}")
+
+          # Step 3: explicitly mark initialized (no-op if /auth/jellyfin
+          # already did so).
+          if not initialized:
+              init_url = f"http://{HOST}:{SEERR_PORT}/api/v1/settings/initialize"
+              try:
+                  http("POST", init_url, api_key)
+                  log("seerr: public.initialized set to true")
+              except urllib.error.HTTPError as e:
+                  log(f"seerr: POST /api/v1/settings/initialize failed ({e.code}): {e.read()[:200]!r}")
+
+          return True
+
+
       def main():
           deadline = time.time() + READY_TIMEOUT
           if not wait_seerr_ready(deadline):
@@ -517,10 +613,19 @@ let
           except Exception as e:
               log(f"seerr: could not extract API key — {e}")
               return
+
           if not initialized:
-              log("seerr: setup wizard not yet completed (public.initialized != true); "
-                  "skipping. Log into Seerr, finish the wizard, then "
-                  "`systemctl start media-bootstrap-seerr`.")
+              log("seerr: wizard not yet completed — attempting auto-run from sops creds")
+              reconcile_seerr_wizard()
+              # Re-read; the wizard run above should have flipped initialized.
+              try:
+                  seerr_key, initialized = extract_seerr_state()
+              except Exception as e:
+                  log(f"seerr: post-wizard state read failed — {e}")
+                  return
+
+          if not initialized:
+              log("seerr: still not initialized after wizard attempt; skipping *arr registration")
               return
 
           for arr in ("sonarr", "radarr"):
@@ -556,6 +661,28 @@ in {
   sops.templates."media-bootstrap-env" = {
     content = ''
       ARR_ADMIN_PASSWORD=${config.sops.placeholder."media/arr-admin-password"}
+    '';
+    mode = "0400";
+  };
+
+  # Jellyfin admin creds, used by the host-side reconciler to drive Seerr's
+  # first-run wizard via /api/v1/auth/jellyfin. Optional: if either secret
+  # is absent, the reconciler logs and skips (the wizard can still be done
+  # manually in Seerr's web UI). Seed *after* completing Jellyfin's own
+  # first-run wizard once — Jellyfin's setup API is version-fragile and not
+  # worth automating, so we leave it as a single manual step and pair from
+  # there.
+  sops.secrets."media/jellyfin-admin-username" = {
+    mode = "0400";
+  };
+  sops.secrets."media/jellyfin-admin-password" = {
+    mode = "0400";
+  };
+
+  sops.templates."media-bootstrap-seerr-env" = {
+    content = ''
+      JELLYFIN_ADMIN_USERNAME=${config.sops.placeholder."media/jellyfin-admin-username"}
+      JELLYFIN_ADMIN_PASSWORD=${config.sops.placeholder."media/jellyfin-admin-password"}
     '';
     mode = "0400";
   };
@@ -618,6 +745,7 @@ in {
       User = "root";
       Group = "root";
       ExecStart = "${seerrReconciler}";
+      EnvironmentFile = config.sops.templates."media-bootstrap-seerr-env".path;
       SuccessExitStatus = "0 1";
     };
   };
