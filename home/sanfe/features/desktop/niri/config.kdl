@@ -19,6 +19,10 @@ environment {
 output "DP-1" {
     mode "5120x1440@239.761"
     variable-refresh-rate
+
+    layout {
+        default-column-width { proportion 0.33333; }
+    }
 }
 
 input {
