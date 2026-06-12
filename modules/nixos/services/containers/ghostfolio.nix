@@ -21,6 +21,16 @@ in {
       description = "Port Ghostfolio listens on inside the host network namespace.";
     };
 
+    host = mkOption {
+      type = types.str;
+      default = "127.0.0.1";
+      description = ''
+        Bind address for Ghostfolio's HTTP listener. Defaults to loopback so
+        the service is only reachable through a local reverse proxy; set to
+        0.0.0.0 when fronting the container from another host.
+      '';
+    };
+
     environmentFile = mkOption {
       type = types.path;
       description = ''
@@ -57,7 +67,7 @@ in {
 
       environment = {
         NODE_ENV = "production";
-        HOST = "0.0.0.0";
+        HOST = cfg.host;
         PORT = toString cfg.port;
         REDIS_HOST = cfg.redisHost;
         REDIS_PORT = toString cfg.redisPort;

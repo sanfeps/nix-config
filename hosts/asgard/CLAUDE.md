@@ -14,7 +14,7 @@ All live under `services/` and are wired in `services/default.nix`:
 
 - **`finances/`** — shared PostgreSQL (TCP on `127.0.0.1` so containers can connect via `--network=host`) + per-app modules:
   - **Firefly III** at `https://firefly.lan.valgrindr.net` (native NixOS module, peer auth via socket, php_fastcgi via Unix socket). TLS terminates on bifrost; bifrost proxies plain HTTP to asgard:80, where a tiny local Caddy translates HTTP→FastCGI to PHP-FPM's socket (the socket can't be reached across hosts, which is why asgard keeps Caddy at all). Caveat: trusted-proxy handling in Firefly is unreliable, so asgard's `php_fastcgi` lies to PHP with `env HTTPS on` + `env SERVER_PORT 443` — Symfony then thinks the connection is https and Laravel emits https:// URLs everywhere.
-  - **Ghostfolio** (Podman container on TCP+scram auth, local Redis on `127.0.0.1:6379`). Caddy on bifrost reverse-proxies `http://ghostfolio.lan.valgrindr.net` → `192.168.1.54:3333`. Firewall on asgard restricts port 3333 to source `192.168.1.55` (bifrost) only.
+  - **Ghostfolio** (Podman container on TCP+scram auth, local Redis on `127.0.0.1:6379`). Container binds `127.0.0.1:3333` (via the module's `host` option) and is fronted by asgard's local Caddy at `https://ghostfolio.lan.valgrindr.net`. AdGuard rewrites the name directly to `192.168.1.54`; bifrost is not in the request path.
   - Secrets come from sops via `sops.templates` rendered into env / SQL files at activation. **Ghostfolio user accounts are not declarative**: passwordless model with server-side tokens stored hashed in Postgres (`Account` table). The current user's token is stashed in sops at `finances/ghostfolio-user-token` purely as a recovery aid — on a from-scratch rebuild, restore the Postgres dump (`/persist/var/backups/postgres/`) **before** logging in; if the DB is empty Ghostfolio mints a new token and the one in sops becomes useless.
   - **`fly-import`** CLI for Kutxabank PDFs.
   - **Backups**: `pg_dump` custom format daily, persisted at `/persist/var/backups/postgres/`, validated end-to-end (restorable).
@@ -35,8 +35,9 @@ Asgard runs its own Caddy via the shared `services.caddyNjalla` module (`modules
 Per-host-Caddy migration status (`docs/per-host-caddy-migration-plan.md`):
 
 - **Immich** — fronted by local Caddy (Phase 1 ✓).
+- **Ghostfolio** — fronted by local Caddy (Phase 2a ✓).
 - **Firefly III** — legacy: vhost still binds plain `:80` HTTP and bifrost terminates TLS in front of it; the PHP-FPM Unix socket bridge stays in `hosts/asgard/services/finances/firefly.nix` until Phase 3.
-- **Ghostfolio** / **Home Assistant** — legacy: still listening on `:3333`/`:8123` with bifrost reverse-proxying. Phase 2 cuts them over.
+- **Home Assistant** — legacy: still listening on `:8123` with bifrost reverse-proxying. Phase 2b cuts it over.
 
 ## Deploys
 

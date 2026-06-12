@@ -70,11 +70,7 @@ in {
     environmentFile = config.sops.templates."ghostfolio.env".path;
   };
 
-  # Container binds 0.0.0.0:3333 (its image hardcodes HOST=0.0.0.0). Caddy on
-  # bifrost reverse-proxies the public name to this port; the rest of the LAN
-  # must not see it. extraCommands (iptables) because asgard still runs the
-  # iptables backend.
-  networking.firewall.extraCommands = ''
-    iptables -I nixos-fw -p tcp --dport ${toString port} -s 192.168.1.55 -j nixos-fw-accept
+  services.caddy.virtualHosts."ghostfolio.lan.valgrindr.net".extraConfig = ''
+    reverse_proxy 127.0.0.1:${toString port}
   '';
 }

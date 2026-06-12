@@ -56,8 +56,9 @@ in {
             enabled = true;
           }
           {
+            # per-host-caddy Phase 2a: ghostfolio is fronted by asgard's own Caddy.
             domain = "ghostfolio.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
           {
