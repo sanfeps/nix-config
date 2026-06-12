@@ -13,7 +13,7 @@ Networking host. Proxmox VM on the home LAN. The rainbow bridge between Asgard (
 Wired in `services/default.nix`:
 
 - **`dns.nix`** — AdGuard Home. Bound to `0.0.0.0:53`, DoH upstream Quad9. WebUI on `127.0.0.1:3000`, reverse-proxied by Caddy at `https://adguard.lan.valgrindr.net`. LAN-zone rewrites point every `*.lan.valgrindr.net` name at bifrost (`192.168.1.55`); bifrost owns LAN TLS termination so even services running on asgard (Firefly, Ghostfolio, Home Assistant) get their public name pointed at bifrost and proxied across. `mutableSettings = false`: changes only via Nix.
-- **`caddy.nix`** — Single Caddy instance with Njalla DNS-01 plugin (built via `pkgs.caddy.withPlugins`). Two top-level vhosts:
+- **`caddy.nix`** — vhost declarations only. The daemon, Njalla DNS-01 plugin build, sops env file, `acme_dns njalla` global config, ports 80/443, and `/var/lib/caddy` persistence are owned by the shared `services.caddyNjalla` module (`modules/nixos/services/caddy-njalla.nix`) — this file just sets `services.caddyNjalla.enable = true` and declares `services.caddy.virtualHosts.*`. Two top-level vhosts:
   - `headscale.valgrindr.net` (public): TLS via HTTP-01 on 80/443 forwarded by router → bifrost. Proxies to `127.0.0.1:8080`.
   - `*.lan.valgrindr.net` (wildcard, LE via DNS-01 with `acme_dns njalla {env.NJALLA_API_TOKEN}`): per-service routing via `@host` matchers + `handle` blocks. Adguard local (127.0.0.1:3000); Homepage local (127.0.0.1:8082, handle in `homepage.nix`); Headplane local (127.0.0.1:3001, handle in `headplane.nix`); Ghostfolio (192.168.1.54:3333); Home Assistant (192.168.1.54:8123); Firefly (192.168.1.54:80 — asgard runs a tiny Caddy that lies to PHP with `env HTTPS on` so Firefly emits https URLs). Fallback `respond "bifrost edge - unknown subdomain" 404`.
 - **`headscale.nix`** — self-hosted Tailscale control plane. Listens `127.0.0.1:8080`, DERP STUN UDP `3478`. Pushes `192.168.1.55` (bifrost AdGuard) as DNS to tailnet members. `headscale-bootstrap` oneshot seeds the SQLite DB with the `yggdrasil` user + reusable preauth-key (prefix+hash from sops). HuJSON policy lives inline (`policyFile`): default-allow ACL + `autoApprovers.exitNode` for `group:exit-approvers` (member `yggdrasil@`), so any node enrolled as `yggdrasil` that advertises `0.0.0.0/0` + `::/0` is approved without `headscale nodes approve-routes`.
@@ -71,7 +71,7 @@ Same `trusted-users`-off pattern as asgard: always build on the remote, never pu
 
 ## Caddy plugin pinning
 
-The `caddy-dns/njalla` repo has no tagged releases. The plugin is pinned in `services/caddy.nix` to a Go pseudo-version `v0.0.0-YYYYMMDDHHMMSS-<short-sha>` plus a `sha256-…` hash. To bump:
+The `caddy-dns/njalla` repo has no tagged releases. The plugin is pinned in `modules/nixos/services/caddy-njalla.nix` to a Go pseudo-version `v0.0.0-YYYYMMDDHHMMSS-<short-sha>` plus a `sha256-…` hash. To bump:
 
 1. Find the latest commit SHA on `github.com/caddy-dns/njalla`.
 2. Replace both the timestamp and SHA in the pseudo-version (`v0.0.0-<ts>-<sha[:12]>`).

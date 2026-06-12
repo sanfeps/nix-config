@@ -43,6 +43,7 @@ Hosts that want it set `services.containers.myservice.enable = true` in their ow
 ## Current layout
 
 - `services/containers/` — Podman-backed service modules (currently `ghostfolio`). Requires `hosts/optional/podman.nix` on the consuming host. `ghostfolio` showcases the env-file pattern: secrets enter via `environmentFile` (a path rendered by `sops.templates`) so the module itself stays secrets-free.
+- `services/caddy-njalla.nix` — Caddy + Njalla DNS-01 plugin bundle. Owns the plugin version+hash pin, the `njalla-api-token` sops secret and `caddy-env` sops template, the `acme_dns njalla` global config, ports 80/443, and `/var/lib/caddy` persistence. Hosts opt in with `services.caddyNjalla.enable = true` and then declare their own `services.caddy.virtualHosts.*` separately. This is the per-host-ingress building block — every host that fronts apps with its own LE wildcard cert enables it.
 
 ## Future direction
 

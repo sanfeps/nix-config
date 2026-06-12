@@ -1,35 +1,11 @@
-{
-  config,
-  pkgs,
-  lib,
-  ...
-}: let
-  # caddy-dns/njalla has no tagged releases; pin to a commit via Go pseudo-version
-  # (format: v0.0.0-YYYYMMDDHHMMSS-<short-sha>). Bump by replacing both fields.
-  njallaPlugin = "github.com/caddy-dns/njalla@v0.0.0-20250823094507-f709141f1fe6";
-
-  caddyWithNjalla = pkgs.caddy.withPlugins {
-    plugins = [njallaPlugin];
-    hash = "sha256-lus0hrUQhnmFeQXvJrYy9kcNkuI1cMmQ4xS7QscQ6tc=";
-  };
-in {
-  sops.secrets."njalla-api-token".mode = "0400";
-
-  # Caddy reads NJALLA_API_TOKEN via environmentFile for the acme_dns directive.
-  sops.templates."caddy-env" = {
-    content = "NJALLA_API_TOKEN=${config.sops.placeholder."njalla-api-token"}\n";
-    owner = "caddy";
-    mode = "0400";
-  };
+{...}: {
+  # Caddy daemon, Njalla DNS-01 plugin, sops env file, ACME global config,
+  # firewall ports, and /var/lib/caddy persistence are owned by the shared
+  # services.caddyNjalla module (modules/nixos/services/caddy-njalla.nix).
+  # This file declares only vhosts.
+  services.caddyNjalla.enable = true;
 
   services.caddy = {
-    enable = true;
-    package = caddyWithNjalla;
-    environmentFile = config.sops.templates."caddy-env".path;
-    # Wildcard cert for *.lan.valgrindr.net via Njalla DNS-01.
-    globalConfig = ''
-      acme_dns njalla {env.NJALLA_API_TOKEN}
-    '';
     # Headscale lives on a PUBLIC domain (own cert via Njalla DNS-01 too) so
     # the world can reach the tailnet control plane. Router port-forwards
     # 80/443 to bifrost; the wildcard cert below covers only *.lan.valgrindr.net.
@@ -63,25 +39,9 @@ in {
         reverse_proxy 192.168.1.54:80
       }
 
-      @immich host immich.lan.valgrindr.net
-      handle @immich {
-        reverse_proxy 192.168.1.54:2283
-      }
-
       handle {
         respond "bifrost edge - unknown subdomain" 404
       }
     '';
   };
-
-  networking.firewall.allowedTCPPorts = [80 443];
-
-  environment.persistence."/persist".directories = [
-    {
-      directory = "/var/lib/caddy";
-      user = "caddy";
-      group = "caddy";
-      mode = "0700";
-    }
-  ];
 }

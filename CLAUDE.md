@@ -159,6 +159,9 @@ Set in each host's core configuration and accessible throughout the system.
 #### Monitor Configuration
 Home-manager supports a custom `monitors` option for declarative multi-monitor setup. Defined per-host in `home/sanfe/{hostname}.nix` with properties: name, width, height, workspace, primary.
 
+#### Caddy Edge Module
+`modules/nixos/services/caddy-njalla.nix` bundles the Caddy daemon, the `caddy-dns/njalla` plugin (pinned via `pkgs.caddy.withPlugins`), the `njalla-api-token` sops secret + `caddy-env` sops template, the `acme_dns njalla` global config, ports 80/443, and `/var/lib/caddy` persistence into a single opt-in: `services.caddyNjalla.enable = true`. Hosts that front apps with their own wildcard LE cert enable it and then declare `services.caddy.virtualHosts.*` separately. This is the per-host ingress building block — see `docs/per-host-caddy-migration-plan.md` for the migration away from the bifrost-as-DMZ model.
+
 #### Container Services
 Declarative Podman container services are managed through custom NixOS modules located in `modules/nixos/services/containers/`. Each service module defines options and configuration for running containers via `virtualisation.oci-containers`.
 
