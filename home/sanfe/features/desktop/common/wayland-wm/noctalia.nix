@@ -6,7 +6,7 @@
 }: {
   imports = [inputs.noctalia-shell.homeModules.default];
 
-  programs.noctalia-shell = {
+  programs.noctalia = {
     enable = true;
     package = inputs.noctalia-shell.packages.${pkgs.system}.default;
   };
