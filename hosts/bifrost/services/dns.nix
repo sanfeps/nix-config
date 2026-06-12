@@ -62,8 +62,9 @@ in {
             enabled = true;
           }
           {
+            # per-host-caddy Phase 2b: home-assistant is fronted by asgard's own Caddy.
             domain = "home.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
           {

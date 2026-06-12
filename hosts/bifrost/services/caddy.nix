@@ -24,11 +24,6 @@
         reverse_proxy 127.0.0.1:3000
       }
 
-      @home host home.lan.valgrindr.net
-      handle @home {
-        reverse_proxy 192.168.1.54:8123
-      }
-
       @firefly host firefly.lan.valgrindr.net
       handle @firefly {
         reverse_proxy 192.168.1.54:80

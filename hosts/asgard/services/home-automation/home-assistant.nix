@@ -7,8 +7,6 @@
 in {
   services.home-assistant = {
     enable = true;
-    # openFirewall would expose :8123 to the whole LAN. Bifrost (the edge)
-    # is the only off-host client that should reach it; firewall rule below.
     openFirewall = false;
 
     config = {
@@ -26,13 +24,11 @@ in {
       };
 
       http = {
+        server_host = "127.0.0.1";
         use_x_forwarded_for = true;
-        # bifrost terminates TLS and forwards X-Forwarded-For. Trust the LAN
-        # source it proxies from so client IPs are surfaced correctly in HA.
         trusted_proxies = [
           "127.0.0.1"
           "::1"
-          "192.168.1.55"
         ];
       };
 
@@ -56,6 +52,10 @@ in {
       "script ui" = "!include scripts.yaml";
     };
   };
+
+  services.caddy.virtualHosts."home.lan.valgrindr.net".extraConfig = ''
+    reverse_proxy 127.0.0.1:8123
+  '';
 
   systemd.services.home-assistant.preStart = lib.mkAfter ''
     mkdir -p "${cfg.configDir}/packages" "${cfg.configDir}/themes" "${cfg.configDir}/www"
@@ -85,10 +85,4 @@ in {
       mode = "0750";
     }
   ];
-
-  # Only bifrost reaches :8123 from off-host; everyone else gets the cert via
-  # the bifrost edge. iptables sintax — asgard still runs the legacy backend.
-  networking.firewall.extraCommands = ''
-    iptables -I nixos-fw -p tcp --dport 8123 -s 192.168.1.55 -j nixos-fw-accept
-  '';
 }
