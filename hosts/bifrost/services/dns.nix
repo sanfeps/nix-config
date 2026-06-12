@@ -7,6 +7,7 @@
   # firefly's php_fastcgi socket forces a tiny local Caddy on asgard, but the
   # public entry point is still bifrost (HTTPS) → asgard:80 (HTTP→FastCGI).
   bifrostIp = "192.168.1.55";
+  asgardIp = "192.168.1.54";
   lanZone = "lan.valgrindr.net";
   webPort = 3000;
   # bcrypt hash for the AdGuard webUI admin (same recipe as asgard).
@@ -121,8 +122,9 @@ in {
             enabled = true;
           }
           {
+            # per-host-caddy Phase 1: immich is fronted by asgard's own Caddy.
             domain = "immich.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
         ];

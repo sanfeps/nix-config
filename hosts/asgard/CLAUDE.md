@@ -21,7 +21,7 @@ All live under `services/` and are wired in `services/default.nix`:
 - **`home-automation/`** — Home Assistant + Mosquitto.
   - Home Assistant binds to `0.0.0.0:8123`. Caddy on bifrost reverse-proxies `http://home.lan.valgrindr.net` → `192.168.1.54:8123`. Firewall on asgard restricts 8123 to source `192.168.1.55` only.
   - Home Assistant config has `bifrost (192.168.1.55)` in `trusted_proxies` so `X-Forwarded-For` headers surface real client IPs.
-- **`immich.nix`** — self-hosted photo/video library at `https://immich.lan.valgrindr.net`. Native NixOS module, binds `0.0.0.0:2283`, Pattern-B firewall to bifrost. Photo library lives at `/mnt/nas/immich`, which is **pre-NAS** backed by a local tmpfiles dir (see header of the file); once the NAS lands, uncomment the fileSystems block and drop the tmpfiles entries — the same path gets overlaid by NFS with no service-side change. Service state (DB rows, thumbnails, encoded video, ML models) lives under `/var/lib/immich` (persisted), photo originals under the mediaLocation. Machine-learning is on by default — CPU-heavy, revisit if asgard struggles.
+- **`immich.nix`** — self-hosted photo/video library at `https://immich.lan.valgrindr.net`. Native NixOS module, binds `127.0.0.1:2283`, fronted by asgard's local Caddy (per-host-Caddy Phase 1). AdGuard rewrites `immich.lan.valgrindr.net` → `192.168.1.54` directly; bifrost is not in the request path. Photo library lives at `/mnt/nas/immich`, which is **pre-NAS** backed by a local tmpfiles dir (see header of the file); once the NAS lands, uncomment the fileSystems block and drop the tmpfiles entries — the same path gets overlaid by NFS with no service-side change. Service state (DB rows, thumbnails, encoded video, ML models) lives under `/var/lib/immich` (persisted), photo originals under the mediaLocation. Machine-learning is on by default — CPU-heavy, revisit if asgard struggles.
 - **`media/`** — see `services/media/CLAUDE.md` for the full media stack (Jellyfin, Seerr, Sonarr/Radarr/Prowlarr in a Mullvad netns, qBittorrent, Recyclarr).
 
 ## Tailnet client
@@ -30,7 +30,13 @@ Asgard imports `hosts/optional/tailscale.nix` and enrols into the `yggdrasil` ta
 
 ## Caddy
 
-Asgard runs a **minimal Caddy** solely as an HTTP→FastCGI translator for Firefly III (PHP-FPM Unix socket, can't be reached from bifrost across hosts). No TLS here — bifrost terminates TLS with the wildcard LE cert and proxies plain HTTP to asgard:80. Port 80 is firewalled to `192.168.1.55` (bifrost) only. Every other service on asgard (Ghostfolio, Home Assistant) listens directly and is proxied straight from bifrost without going through asgard's Caddy.
+Asgard runs its own Caddy via the shared `services.caddyNjalla` module (`modules/nixos/services/caddy-njalla.nix`) with a wildcard LE cert for `*.lan.valgrindr.net` via Njalla DNS-01. Service modules declare their own `services.caddy.virtualHosts.*` inline. Asgard listens on `:80`/`:443` to the LAN.
+
+Per-host-Caddy migration status (`docs/per-host-caddy-migration-plan.md`):
+
+- **Immich** — fronted by local Caddy (Phase 1 ✓).
+- **Firefly III** — legacy: vhost still binds plain `:80` HTTP and bifrost terminates TLS in front of it; the PHP-FPM Unix socket bridge stays in `hosts/asgard/services/finances/firefly.nix` until Phase 3.
+- **Ghostfolio** / **Home Assistant** — legacy: still listening on `:3333`/`:8123` with bifrost reverse-proxying. Phase 2 cuts them over.
 
 ## Deploys
 
@@ -46,5 +52,5 @@ NIX_SSHOPTS="-i ~/.ssh/lykill" nixos-rebuild switch --flake .#asgard \
 
 ## Recovery cheats
 
-- **Caddy 502 on a vhost (from outside)**: vhost is on bifrost, not asgard. Check the bifrost Caddy logs and whether the backing service on asgard is reachable from `192.168.1.55` (firewall rule per service).
-- **`*.lan.valgrindr.net` not resolving from the LAN**: AdGuard on bifrost (`192.168.1.55`) owns LAN DNS now. Check `nc -vz 192.168.1.55 53` from the client.
+- **Caddy 502 on a vhost (from outside)**: figure out where the vhost terminates. For Immich and any future migrated service the answer is asgard (`systemctl status caddy` + `journalctl -u caddy -n 100`); for legacy services (Firefly, Ghostfolio, Home Assistant) it's still bifrost.
+- **`*.lan.valgrindr.net` not resolving from the LAN**: AdGuard on bifrost (`192.168.1.55`) owns LAN DNS. Check `nc -vz 192.168.1.55 53` from the client. The rewrite answer determines which host the request lands on — asgard for migrated services, bifrost for legacy ones.

@@ -15,17 +15,16 @@
 # no offsite backup). Don't load it up with anything irreplaceable until
 # the NAS migration is done.
 #
-# Topology follows Pattern B (CLAUDE.md): immich listens off-loopback on
-# asgard, firewall locks the port to bifrost (192.168.1.55), and bifrost
-# terminates TLS + reverse-proxies to https://immich.lan.valgrindr.net.
-# Unlike Firefly, Immich honours X-Forwarded-Proto out of the box — no
-# FastCGI HTTPS=on hack needed.
+# Topology: immich binds to 127.0.0.1 and is fronted by asgard's own Caddy
+# (services.caddyNjalla, wildcard LE cert for *.lan.valgrindr.net via Njalla
+# DNS-01). AdGuard rewrites immich.lan.valgrindr.net → 192.168.1.54 directly;
+# bifrost is not in the request path anymore.
 let
   port = 2283;
 in {
   services.immich = {
     enable = true;
-    host = "0.0.0.0";
+    host = "127.0.0.1";
     inherit port;
     # Backed by tmpfiles below pre-NAS; once the fileSystems block lands the
     # NFS automount overlays this exact path.
@@ -52,10 +51,10 @@ in {
     "d /mnt/nas/immich 0700 immich immich -"
   ];
 
-  # Only bifrost reaches :2283 from off-host. iptables backend (asgard is the
-  # legacy nftables-off host); same pattern as firefly/home-assistant.
-  networking.firewall.extraCommands = ''
-    iptables -I nixos-fw -p tcp --dport ${toString port} -s 192.168.1.55 -j nixos-fw-accept
+  # Caddy on asgard fronts immich locally over loopback — no firewall hole
+  # needed for :2283 (it's bound to 127.0.0.1).
+  services.caddy.virtualHosts."immich.lan.valgrindr.net".extraConfig = ''
+    reverse_proxy 127.0.0.1:${toString port}
   '';
 
   # ---------------------------------------------------------------------------

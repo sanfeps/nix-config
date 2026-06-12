@@ -298,44 +298,25 @@ AdGuard Home on bifrost owns LAN DNS and is the authoritative resolver for `lan.
 
 ### Adding a new networked service
 
-Services run on the host that best fits them; ingress is always bifrost. Two patterns:
+Ingress is per-host: the host that runs the service also terminates TLS for it. Both asgard and bifrost enable `services.caddyNjalla` (`modules/nixos/services/caddy-njalla.nix`) — a Caddy bundle with the Njalla DNS-01 plugin that auto-issues a wildcard LE cert for `*.lan.valgrindr.net`. Vhosts live inline next to each service.
 
-**Pattern A — service lives on bifrost** (the simple case, when the service has no reason to be elsewhere):
-
-1. Define the service in `hosts/bifrost/services/{name}.nix` and bind to `127.0.0.1`. Import in `services/default.nix`.
-2. Secrets: declare under `sops.secrets.…`; add via `sops`.
-3. Persistence: state dirs in `environment.persistence."/persist".directories`.
-4. Add a Caddy handle inside the wildcard vhost in `hosts/bifrost/services/caddy.nix`:
+1. Define the service in `hosts/<host>/services/<group>/<name>.nix` and bind it to `127.0.0.1:<port>`.
+2. In the same file, declare the inline vhost:
    ```nix
-   @myservice host myservice.lan.valgrindr.net
-   handle @myservice {
+   services.caddy.virtualHosts."${name}.lan.valgrindr.net".extraConfig = ''
      reverse_proxy 127.0.0.1:${toString port}
-   }
-   ```
-5. DNS rewrite: add to `services.adguardhome.settings.filtering.rewrites` in `hosts/bifrost/services/dns.nix` pointing at `192.168.1.55`, with `enabled = true;`.
-6. Firewall: extra TCP listeners (beyond Caddy) → `networking.firewall.allowedTCPPorts`.
-7. Deploy bifrost.
-
-**Pattern B — service lives on asgard** (use only when there's a hard reason: PHP-FPM Unix socket, host-network container with local-only deps, etc):
-
-1. Define the service in `hosts/asgard/services/{group}/` and bind to `0.0.0.0:<port>` (or however the service requires for off-host access).
-2. Secrets / persistence: same as Pattern A, on asgard.
-3. **Lock the firewall down**: open the port **only to bifrost** so the wider LAN can't reach it directly:
-   ```nix
-   networking.firewall.extraCommands = ''
-     iptables -I nixos-fw -p tcp --dport ${toString port} -s 192.168.1.55 -j nixos-fw-accept
    '';
    ```
-4. On bifrost, add a Caddy handle that proxies to `192.168.1.54:<port>`:
-   ```nix
-   @myservice host myservice.lan.valgrindr.net
-   handle @myservice {
-     reverse_proxy 192.168.1.54:${toString port}
-   }
-   ```
-5. DNS rewrite on bifrost: same as Pattern A but pointing at `192.168.1.54`.
-6. If the service receives `X-Forwarded-For` from Caddy, add `192.168.1.55` to its `trusted_proxies` config (see `home-assistant.nix` on asgard for the pattern).
-7. Deploy both hosts (asgard first to open the firewall hole, then bifrost so the proxy can reach it).
+3. Secrets: `sops.secrets.…` (see "Working with Secrets" above).
+4. Persistence: `environment.persistence."${config.hostSpec.persistFolder}".directories`.
+5. DNS rewrite on bifrost: add to `services.adguardhome.settings.filtering.rewrites` in `hosts/bifrost/services/dns.nix` with `answer = "<host's LAN IP>"` and `enabled = true;` (use the `bifrostIp`/`asgardIp` constants).
+6. Deploy the app host. Bifrost only needs a deploy if the rewrite list changed.
+
+No firewall holes for backend ports, no cross-host Caddy handles, no `trusted_proxies` plumbing — Caddy and the backend share `127.0.0.1`.
+
+> **Legacy migration in progress.** Firefly III, Ghostfolio, and Home Assistant still route via bifrost's edge Caddy until per-host-Caddy Phases 2–3 land (see `docs/per-host-caddy-migration-plan.md`). New services follow the single pattern above; the legacy services will be reshaped to match.
+
+> **Public-domain exception**: `headscale.valgrindr.net` is public ingress (router → bifrost, LE via HTTP-01). That vhost lives in `hosts/bifrost/services/caddy.nix` and stays there — public ingress is out of scope for the per-host model.
 
 ## Active Hosts
 
