@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }: let
@@ -7,17 +8,42 @@
   tailnetDomain = "ts.yggdrasil.lo";
   derpPort = 3478;
   bootstrapUser = "yggdrasil";
-  # Tailscale-compatible policy v2 (HuJSON). Lets asgard (still on the tailnet
-  # as a regular peer post-cutover) advertise exit-node routes without anyone
-  # running `headscale nodes approve-routes` by hand. Add more entries to
-  # autoApprovers.routes if subnet routers join later.
+
+  # Guest users exist purely so the ACL can scope them (group:guest) and so the
+  # policy reference stays valid across a DB rebuild. Unlike bootstrapUser they
+  # get NO declarative preauth key — guest keys are short-lived and minted on
+  # demand (`headscale preauthkeys create --user guest --expiration 24h`).
+  # Single source of truth: drives both the bootstrap INSERTs and the ACL group.
+  guestUsers = ["guest"];
+  guestGroupMembers = lib.concatMapStringsSep ", " (u: ''"${u}@"'') guestUsers;
+  # Tailscale-compatible policy v2 (HuJSON).
+  #
+  # group:admin (all the owner's nodes, enrolled under the ${bootstrapUser}
+  # user) keeps blanket access — same effective reach as the old default-allow
+  # rule, just scoped to a group so guests don't inherit it. group:exit-approvers
+  # auto-approves bifrost's exit-node routes (unchanged).
+  #
+  # group:guest is for shared-access users (e.g. a friend who only gets
+  # Jellyfin). Members reach ONLY asgard:8096 (Jellyfin over the tailnet) and
+  # the DNS server on bifrost:53 — the latter because override_local_dns pushes
+  # all of their DNS to 100.64.0.3, so blocking it would break their resolver.
+  # Everything else (other services, the LAN, the exit node) is denied by
+  # omission. Create the matching headscale user with `headscale users create
+  # guest`; add more "<user>@" entries here for more guests.
   policyFile = pkgs.writeText "headscale-policy.hujson" ''
     {
       "groups": {
-        "group:exit-approvers": ["${bootstrapUser}@"]
+        "group:admin": ["${bootstrapUser}@"],
+        "group:exit-approvers": ["${bootstrapUser}@"],
+        "group:guest": [${guestGroupMembers}]
+      },
+      "hosts": {
+        "asgard": "100.64.0.2/32",
+        "dns-server": "100.64.0.3/32"
       },
       "acls": [
-        {"action": "accept", "src": ["*"], "dst": ["*:*"]}
+        {"action": "accept", "src": ["group:admin"], "dst": ["*:*"]},
+        {"action": "accept", "src": ["group:guest"], "dst": ["asgard:8096", "dns-server:53"]}
       ],
       "autoApprovers": {
         "exitNode": ["group:exit-approvers"],
@@ -117,6 +143,9 @@ in {
       sqlite3 "$DB" "SELECT 1 FROM users LIMIT 1;" >/dev/null
 
       sqlite3 "$DB" "INSERT OR IGNORE INTO users (name, created_at, updated_at) VALUES ('${bootstrapUser}', datetime('now'), datetime('now'));"
+
+      # Guest users (no preauth key — keys are minted imperatively on demand).
+      ${lib.concatMapStringsSep "\n" (u: ''sqlite3 "$DB" "INSERT OR IGNORE INTO users (name, created_at, updated_at) VALUES ('${u}', datetime('now'), datetime('now'));"'') guestUsers}
 
       USER_ID=$(sqlite3 "$DB" "SELECT id FROM users WHERE name = '${bootstrapUser}' AND deleted_at IS NULL LIMIT 1;")
       [ -n "$USER_ID" ] || { echo "${bootstrapUser} user not found after insert" >&2; exit 1; }
