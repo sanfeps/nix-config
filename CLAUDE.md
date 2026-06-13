@@ -162,6 +162,19 @@ Home-manager supports a custom `monitors` option for declarative multi-monitor s
 #### Caddy Edge Module
 `modules/nixos/services/caddy-njalla.nix` bundles the Caddy daemon, the `caddy-dns/njalla` plugin (pinned via `pkgs.caddy.withPlugins`), the `njalla-api-token` sops secret + `caddy-env` sops template, the `acme_dns njalla` global config, ports 80/443, and `/var/lib/caddy` persistence into a single opt-in: `services.caddyNjalla.enable = true`. Hosts that front apps with their own wildcard LE cert enable it and then declare `services.caddy.virtualHosts.*` separately. This is the per-host ingress building block — see `docs/per-host-caddy-migration-plan.md` for the migration away from the bifrost-as-DMZ model.
 
+#### Reusable Service Modules (`homelab.services.*`)
+Native (non-container) NixOS app services are being migrated from host-local files into reusable modules under `modules/homelab/services/<name>/default.nix`, exposed under the `homelab.services.<name>` option namespace. `modules/homelab/default.nix` aggregates them and `flake.nix` merges that tree into `outputs.nixosModules` (`(import ./modules/nixos) // (import ./modules/homelab)`), so — exactly like `modules/nixos/*` — every entry auto-loads on every host and must stay inert until its `enable` flag flips. A host then only enables + overrides, e.g.:
+
+```nix
+homelab.services.immich = {
+  enable = true;
+  url = "immich.lan.valgrindr.net";
+  mediaLocation = "/mnt/nas/immich";
+};
+```
+
+These are **thin wrappers**: expose the few knobs a host varies, wire the rest (the upstream `services.<thing>.*`, the local-Caddy vhost, persistence) inside the module, and let users drop into `services.<thing>.*` directly for anything not surfaced. Host-specific quirks (e.g. asgard's pre-NAS tmpfiles backing for Immich) stay in the host file. Immich is the canary; see `modules/homelab/CLAUDE.md` for the authoring pattern and `docs/services-reusable-modules-plan.md` for the rollout plan and recorded design decisions.
+
 #### Container Services
 Declarative Podman container services are managed through custom NixOS modules located in `modules/nixos/services/containers/`. Each service module defines options and configuration for running containers via `virtualisation.oci-containers`.
 

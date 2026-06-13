@@ -1,61 +1,38 @@
+{...}:
+# Immich on asgard. The service contract (the upstream module, the local-Caddy
+# vhost, /var/lib/immich persistence) lives in the reusable module
+# `modules/homelab/services/immich` — this file only enables it, sets the
+# asgard-specific knobs, and owns the pre-NAS storage backing.
+#
+# Status: ACTIVE in **pre-NAS mode**. The library lives at /mnt/nas/immich,
+# backed by a local tmpfiles dir until the NAS lands. Once an NFS export
+# exists, uncomment the fileSystems block below and the automount overlays the
+# same path with no service-side change (same staging pattern as
+# media/storage.nix).
+#
+# Caveat: pre-NAS, photo originals live on asgard's rootfs (no redundancy, no
+# offsite backup). Don't load it up with anything irreplaceable until the NAS
+# migration is done.
 {
-  config,
-  lib,
-  ...
-}:
-# Immich — self-hosted photo/video library.
-#
-# Status: ACTIVE in **pre-NAS mode**. The photo library lives at
-# /mnt/nas/immich, which is backed by a local tmpfiles directory until the
-# NAS lands. Once an NFS export exists, uncomment the fileSystems block at
-# the bottom of this file and the NFS automount overlays the same path with
-# no service-side change (same staging pattern as media/storage.nix).
-#
-# Caveat: pre-NAS, photo originals live on asgard's rootfs (no redundancy,
-# no offsite backup). Don't load it up with anything irreplaceable until
-# the NAS migration is done.
-#
-# Topology: immich binds to 127.0.0.1 and is fronted by asgard's own Caddy
-# (services.caddyNjalla, wildcard LE cert for *.lan.valgrindr.net via Njalla
-# DNS-01). AdGuard rewrites immich.lan.valgrindr.net → 192.168.1.54 directly;
-# bifrost is not in the request path anymore.
-let
-  port = 2283;
-in {
-  services.immich = {
+  homelab.services.immich = {
     enable = true;
-    host = "127.0.0.1";
-    inherit port;
+    url = "immich.lan.valgrindr.net";
     # Backed by tmpfiles below pre-NAS; once the fileSystems block lands the
     # NFS automount overlays this exact path.
     mediaLocation = "/mnt/nas/immich";
-
-    # Postgres + Redis + pgvector/vectorchord are configured automatically by
-    # the module. Postgres uses the shared instance on asgard (peer auth via
-    # /run/postgresql), Redis gets a dedicated unix-socket server. Both opt-in
-    # defaults are fine; no need to override.
-
-    # machine-learning is on by default and produces face/object embeddings.
-    # Heavy on CPU; leave on for now and revisit if asgard struggles.
-    machine-learning.enable = true;
+    # machineLearning defaults to true (CPU-heavy); revisit if asgard struggles.
   };
 
   # TEMP(no-nas): back /mnt/nas/immich with a local dir so the service can come
-  # up before the NAS is provisioned. Owned by immich:immich; the module
-  # writes subdirs (library, thumbs, encoded-video, …) into it as it goes.
-  # When the fileSystems block below is uncommented, the NFS automount
-  # overlays /mnt/nas/immich and this underlying dir becomes invisible
-  # (harmless). Remove these two lines at the same time the mount is wired in.
+  # up before the NAS is provisioned. Owned by immich:immich; the module writes
+  # subdirs (library, thumbs, encoded-video, …) into it as it goes. When the
+  # fileSystems block below is uncommented, the NFS automount overlays
+  # /mnt/nas/immich and this underlying dir becomes invisible (harmless).
+  # Remove these two lines at the same time the mount is wired in.
   systemd.tmpfiles.rules = [
     "d /mnt/nas        0755 root root -"
     "d /mnt/nas/immich 0700 immich immich -"
   ];
-
-  # Caddy on asgard fronts immich locally over loopback — no firewall hole
-  # needed for :2283 (it's bound to 127.0.0.1).
-  services.caddy.virtualHosts."immich.lan.valgrindr.net".extraConfig = ''
-    reverse_proxy 127.0.0.1:${toString port}
-  '';
 
   # ---------------------------------------------------------------------------
   # NAS activation checklist (when the NAS lands):
@@ -86,16 +63,4 @@ in {
   #   ];
   # };
   # ---------------------------------------------------------------------------
-
-  # Persistence note: immich state (DB, thumbnails, encoded video, ML models)
-  # lives under /var/lib/immich which we persist below. The actual photo/video
-  # originals live on the NAS via mediaLocation, so they're not in /persist.
-  environment.persistence."${config.hostSpec.persistFolder}".directories = [
-    {
-      directory = "/var/lib/immich";
-      user = config.services.immich.user;
-      group = config.services.immich.group;
-      mode = "0700";
-    }
-  ];
 }

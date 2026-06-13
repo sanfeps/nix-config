@@ -2,6 +2,8 @@
 
 Reusable NixOS modules. Everything exported from `default.nix` is auto-imported into **every** host via `outputs.nixosModules` (see `hosts/common/core/base.nix`), so modules must be inert when their `enable` flag is off.
 
+> Native (non-container) app services live in the sibling tree `modules/homelab/` under the `homelab.services.*` namespace (merged into `outputs.nixosModules` in `flake.nix`). Use that for plain NixOS-unit services; use this tree for container services and shared infrastructure. See `modules/homelab/CLAUDE.md`.
+
 ## Authoring pattern
 
 Each module follows:
