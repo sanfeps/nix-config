@@ -19,8 +19,9 @@
 #     { from = <hostPort>; to = <nsPort>; protocol = "tcp"; }
 #   ];
 #
-# Caddy on bifrost then reverse-proxies 192.168.1.54:<hostPort> like any
-# other Pattern-B service.
+# asgard's own Caddy then reverse-proxies https://<svc>.lan.valgrindr.net to
+# the namespace veth IP 192.168.15.1:<nsPort> (see media/caddy.nix); the
+# portMapping above is what installs the in-namespace veth INPUT ACCEPT.
 #
 # ──────────────────────────────────────────────────────────────────────────
 # Mullvad wg conf bootstrap (one-time, manual):

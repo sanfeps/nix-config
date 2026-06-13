@@ -17,7 +17,7 @@ let
 in {
   services.prowlarr = {
     enable = true;
-    openFirewall = false; # handled below per Pattern-B + VPN namespace.
+    openFirewall = false; # no LAN hole; local Caddy reaches it via the netns veth.
     dataDir = "/srv/media/state/prowlarr";
     # settings.server.port stays at the 9696 default.
   };

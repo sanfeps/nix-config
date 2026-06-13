@@ -282,7 +282,7 @@ AdGuard Home on bifrost owns LAN DNS and is the authoritative resolver for `lan.
 - Bound to `0.0.0.0:53` (DoH to Quad9 upstream).
 - WebUI on `127.0.0.1:3000`, reverse-proxied by Caddy at `https://adguard.lan.valgrindr.net` (TLS via the LE wildcard `*.lan.valgrindr.net`).
 - Module: `hosts/bifrost/services/dns.nix`. Settings use `mutableSettings = false` so changes only happen through Nix.
-- Rewrites point every `*.lan.valgrindr.net` name at bifrost (`192.168.1.55`), except `firefly.lan.valgrindr.net` → asgard (`192.168.1.54`) because Firefly's PHP-FPM Unix socket can't be proxied across hosts.
+- Rewrites point each `*.lan.valgrindr.net` name at the host that terminates TLS for it: bifrost-local names (`adguard`, `homepage`, `headplane`) → bifrost (`192.168.1.55`); every asgard app (Immich, Ghostfolio, Home Assistant, Firefly, the media stack) → asgard (`192.168.1.54`), which runs its own Caddy. bifrost no longer proxies asgard services.
 - Workstations on the LAN reach AdGuard either directly (router DHCP advertises it — TODO) or via Magic DNS through tailscale.
 
 **Gotchas worth memorizing**:
@@ -314,7 +314,7 @@ Ingress is per-host: the host that runs the service also terminates TLS for it. 
 
 No firewall holes for backend ports, no cross-host Caddy handles, no `trusted_proxies` plumbing — Caddy and the backend share `127.0.0.1`.
 
-> **Migration status.** All asgard apps (Immich, Ghostfolio, Home Assistant, Firefly, and the media stack) now front themselves with asgard's own Caddy — per-host-Caddy Phases 1–4 are done (see `docs/per-host-caddy-migration-plan.md`). Bifrost no longer proxies any asgard service. What remains is Phase 5 (shrink bifrost's Caddy to its own local services + retire the lan-expose plan doc) and the forward-looking Phase 6 (Authentik re-scope).
+> **Migration status.** The per-host-Caddy migration is done (Phases 0–5, see `docs/per-host-caddy-migration-plan.md`): every asgard app fronts itself with asgard's own Caddy, and bifrost's Caddy carries only its own local services (adguard, homepage, headplane) plus public headscale. There is exactly one ingress pattern now — the one documented above. Only the forward-looking Phase 6 (Authentik re-scope, doc-only) remains.
 
 > **Public-domain exception**: `headscale.valgrindr.net` is public ingress (router → bifrost, LE via HTTP-01). That vhost lives in `hosts/bifrost/services/caddy.nix` and stays there — public ingress is out of scope for the per-host model.
 

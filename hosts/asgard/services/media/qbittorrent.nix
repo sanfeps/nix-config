@@ -23,7 +23,7 @@ let
 in {
   services.qbittorrent = {
     enable = true;
-    openFirewall = false; # Pattern-B + VPN namespace handle this.
+    openFirewall = false; # no LAN hole; local Caddy reaches it via the netns veth.
     inherit webuiPort;
 
     serverConfig = {

@@ -1,6 +1,6 @@
 # bifrost
 
-Networking host. Proxmox VM on the home LAN. The rainbow bridge between Asgard (apps) and everything else — owns DNS, headscale, public ingress (TLS termination with LE wildcard via Njalla DNS-01), Njalla DDNS for `headscale.valgrindr.net`, and the tailnet exit-node role.
+Networking host. Proxmox VM on the home LAN. The LAN's networking edge — owns DNS (AdGuard), headscale (tailnet control plane), public ingress for `headscale.valgrindr.net`, Njalla DDNS for that name, the tailnet exit-node role, and its own infra UIs (homepage, headplane). It runs its own Caddy with the `*.lan.valgrindr.net` wildcard cert (Njalla DNS-01) but **only for its own local services** — it no longer fronts asgard's apps (per-host-Caddy migration complete; each app host terminates its own TLS).
 
 - LAN IP: `192.168.1.55` (static-at-OS via `networking.interfaces.ens18.ipv4.addresses` until the router supports DHCP reservations)
 - Tailnet IP: `100.64.0.3` (`yggdrasil` tailnet, base domain `ts.yggdrasil.lo`)

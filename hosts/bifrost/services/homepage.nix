@@ -3,8 +3,8 @@
   virtualHost = "homepage.lan.valgrindr.net";
 in {
   # homepage-dashboard — single declarative landing page for every service in
-  # the cluster, regardless of which host runs it. Pattern A: listens locally
-  # on bifrost, bifrost's wildcard Caddy fronts it at https://${virtualHost}.
+  # the cluster, regardless of which host runs it. Listens locally on bifrost;
+  # bifrost's own wildcard Caddy fronts it at https://${virtualHost}.
   #
   # The whole config (tiles, groups, widgets, bookmarks) is declared in Nix and
   # rendered by the module into homepage's expected YAML files at /etc/homepage-dashboard.
