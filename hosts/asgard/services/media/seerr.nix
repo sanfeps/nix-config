@@ -16,11 +16,11 @@ let
 in {
   services.seerr = {
     enable = true;
-    openFirewall = false; # Pattern-B handles this.
+    openFirewall = false; # local Caddy fronts it on loopback.
     inherit port;
   };
 
-  networking.firewall.extraCommands = ''
-    iptables -I nixos-fw -p tcp --dport ${toString port} -s 192.168.1.55 -j nixos-fw-accept
-  '';
+  # Fronted by asgard's own Caddy (per-host-caddy Phase 4) at
+  # https://seerr.lan.valgrindr.net → 127.0.0.1:${toString port}. Vhost lives in
+  # media/caddy.nix; no firewall hole needed (loopback only).
 }

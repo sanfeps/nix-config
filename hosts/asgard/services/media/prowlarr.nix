@@ -29,6 +29,8 @@ in {
     vpnNamespace = "mullvad";
   };
 
+  # See sonarr.nix / media/caddy.nix: portMappings stays for the in-namespace
+  # veth INPUT ACCEPT rule; local Caddy reaches Prowlarr at 192.168.15.1:${toString port}.
   vpnNamespaces.mullvad.portMappings = [
     {
       from = port;
@@ -36,8 +38,4 @@ in {
       protocol = "tcp";
     }
   ];
-
-  networking.firewall.extraCommands = ''
-    iptables -I nixos-fw -p tcp --dport ${toString port} -s 192.168.1.55 -j nixos-fw-accept
-  '';
 }

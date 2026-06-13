@@ -37,6 +37,7 @@ Per-host-Caddy migration status (`docs/per-host-caddy-migration-plan.md`):
 - **Ghostfolio** — fronted by local Caddy (Phase 2a ✓).
 - **Home Assistant** — fronted by local Caddy (Phase 2b ✓).
 - **Firefly III** — fronted by local Caddy (Phase 3 ✓). Caddy terminates TLS and proxies straight to the PHP-FPM Unix socket.
+- **Media stack** (Jellyfin, Seerr, qBittorrent, Prowlarr, Sonarr, Radarr) — fronted by local Caddy (Phase 4 ✓). Vhosts in `services/media/caddy.nix`; the four Mullvad-confined services are proxied to the netns veth IP `192.168.15.1:<port>`. See `services/media/CLAUDE.md`. `media-proxies.nix` on bifrost is deleted.
 
 ## Deploys
 

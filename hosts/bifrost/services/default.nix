@@ -6,6 +6,5 @@
     ./headplane.nix
     ./ddns.nix
     ./homepage.nix
-    ./media-proxies.nix
   ];
 }

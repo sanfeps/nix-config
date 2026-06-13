@@ -7,31 +7,35 @@ Scaffold mode is the rule: the `./media` import in `hosts/asgard/services/defaul
 ## Topology at a glance
 
 ```
-                                    bifrost (192.168.1.55)
-                                    ├── Caddy *.lan.valgrindr.net (wildcard LE via Njalla DNS-01)
-                                    ├── AdGuard rewrites → bifrost
-                                    └── Homepage tiles
-                                              │
-                                              ▼  reverse_proxy 192.168.1.54:<port>
-                                    ┌────────────────────────────────────┐
-                                    │ asgard (192.168.1.54) — host net   │
-                                    │                                    │
-                                    │  Jellyfin :8096    Seerr :5055     │
-                                    │  Recyclarr (timer, talks loopback) │
-                                    │                                    │
-                                    │  ┌────── Mullvad netns ──────────┐ │
-                                    │  │ qBittorrent :8080             │ │
-                                    │  │ Prowlarr    :9696             │ │
-                                    │  │ Sonarr      :8989             │ │
-                                    │  │ Radarr      :7878             │ │
-                                    │  │  (egress only via WireGuard)  │ │
-                                    │  └───────────────────────────────┘ │
-                                    │           ▲ portMappings           │
-                                    │           │ (host loopback ↔ ns)   │
-                                    └────────────────────────────────────┘
+   bifrost (192.168.1.55)            client → https://<svc>.lan.valgrindr.net
+   └── AdGuard: rewrites every             │ (AdGuard answers 192.168.1.54)
+       media name → 192.168.1.54           ▼
+                                  ┌────────────────────────────────────────┐
+                                  │ asgard (192.168.1.54) — host net        │
+                                  │  Caddy *.lan.valgrindr.net (own LE cert)│
+                                  │   ├─ jellyfin → 127.0.0.1:8096          │
+                                  │   ├─ seerr    → 127.0.0.1:5055          │
+                                  │   └─ qbit/prowlarr/sonarr/radarr        │
+                                  │        → 192.168.15.1:<port> (veth)     │
+                                  │  Recyclarr (timer, talks loopback)      │
+                                  │                                         │
+                                  │  ┌──── Mullvad netns (192.168.15.1) ──┐ │
+                                  │  │ qBittorrent :8080  Prowlarr :9696  │ │
+                                  │  │ Sonarr      :8989  Radarr   :7878  │ │
+                                  │  │  (egress only via WireGuard)       │ │
+                                  │  └────────────────────────────────────┘│
+                                  │   mullvad-br 192.168.15.5/24 ◄─ Caddy   │
+                                  └─────────────────────────────────────────┘
 ```
 
-`accessibleFrom` on the namespace whitelists the LAN, tailnet, and host loopback so port mappings are reachable from all three.
+Per-host-caddy Phase 4: asgard's own Caddy fronts all six WebUIs; bifrost is
+not in the request path (AdGuard just points the names at asgard). The
+confined four are reached at the namespace veth IP `192.168.15.1:<port>` over
+the `mullvad-br` bridge, **not** loopback — the VPN-Confinement DNAT only
+fires for incoming connections, so host-local Caddy bypasses it and hits the
+veth directly (the `portMappings` entries provide the in-namespace INPUT
+ACCEPT that permits this). `accessibleFrom` whitelists the LAN, tailnet, and
+host loopback for the namespace's return path.
 
 ## Why the split?
 
@@ -120,17 +124,17 @@ Once the NAS exists at `nas.lan` (or wherever) exporting an NFS share:
 
 ### 4. Activate the import
 
-Uncomment `./media` in `hosts/asgard/services/default.nix` and deploy. The Mullvad namespace comes up immediately at activation; per-service WebUIs become reachable through the bifrost Caddy handles as soon as each unit starts.
+Uncomment `./media` in `hosts/asgard/services/default.nix` and deploy. The Mullvad namespace comes up immediately at activation; per-service WebUIs become reachable through asgard's own Caddy vhosts (`media/caddy.nix`) as soon as each unit starts.
 
-## Bifrost wiring
+## Ingress (per-host-caddy Phase 4)
 
-Everything in this stack is Pattern-B (per the root CLAUDE.md): the service listens directly on asgard, asgard's firewall locks the port to `192.168.1.55` (bifrost), and bifrost terminates TLS. The bifrost-side wiring is:
+Every WebUI is fronted by **asgard's own Caddy** (`services.caddyNjalla`, wildcard LE via Njalla DNS-01). bifrost is no longer in the request path — it only answers DNS. The wiring is:
 
-- `hosts/bifrost/services/media-proxies.nix` — six Caddy handles (jellyfin/seerr/qbittorrent/prowlarr/sonarr/radarr) → `192.168.1.54:<port>`.
-- `hosts/bifrost/services/dns.nix` — six AdGuard rewrites pointing each `*.lan.valgrindr.net` name at bifrost.
-- `hosts/bifrost/services/homepage.nix` — "Media (asgard)" group with all six tiles.
+- `hosts/asgard/services/media/caddy.nix` — the six vhosts. Unconfined services (Jellyfin, Seerr) → `127.0.0.1:<port>`; confined services (qBittorrent, Prowlarr, Sonarr, Radarr) → the netns veth IP `192.168.15.1:<port>` (see the topology note above for why loopback won't work for those).
+- `hosts/bifrost/services/dns.nix` — six AdGuard rewrites pointing each `*.lan.valgrindr.net` name at **asgard** (`192.168.1.54`).
+- `hosts/bifrost/services/homepage.nix` — "Media (asgard)" group with all six tiles (URLs unchanged).
 
-Until `./media` is uncommented on asgard, the Caddy handles 502 cosmetically. That's expected scaffold-mode behaviour.
+No firewall holes: backends are either loopback or the netns veth, both reachable only from asgard itself. Until `./media` is active on asgard, the vhosts 502 cosmetically — that's expected scaffold-mode behaviour.
 
 ## Inter-service wiring
 
@@ -145,9 +149,9 @@ We do **not** pre-seed API keys via sops: the *arrs generate them on first boot 
   - **Sonarr → qBittorrent** (`/api/v3/downloadclient`) with category `tv-sonarr`.
   - **Radarr → qBittorrent** with category `movies-radarr`.
   - **Sonarr / Radarr root folders** (`/api/v3/rootfolder`) — declares `/mnt/nas/media/library/tv` and `/mnt/nas/media/library/movies` as the library targets. The dirs are pre-created by storage.nix as tmpfiles entries, so this works pre-NAS; once the NFS mount lands, the same paths are overlaid by the remote share with no *arr-side change.
-  - **Auth bypass on the *arrs** (`/api/v{3,1}/config/host`) — sets `authenticationMethod=forms` + `authenticationRequired=disabledForLocalAddresses` and seeds an admin user (`admin` / password from sops `media/arr-admin-password`). LAN traffic via Caddy comes from 192.168.1.55 which is RFC1918, so the *arrs treat it as "local" and skip the form; off-LAN (tailnet) hits the form with the seeded creds. **qBittorrent** is handled separately and natively: its `AuthSubnetWhitelist` already covers LAN + tailnet + loopback (`qbittorrent.nix`), no reconciler step needed.
+  - **Auth bypass on the *arrs** (`/api/v{3,1}/config/host`) — sets `authenticationMethod=forms` + `authenticationRequired=disabledForLocalAddresses` and seeds an admin user (`admin` / password from sops `media/arr-admin-password`). Traffic via asgard's Caddy reaches the confined *arrs at the netns veth, so the source is `192.168.15.5` (the `mullvad-br` bridge) which is RFC1918 — the *arrs treat it as "local" and skip the form regardless of original client (same collapse the old bifrost path had). **qBittorrent** is handled separately and natively: its `AuthSubnetWhitelist` covers LAN + tailnet + loopback + the bridge `192.168.15.0/24` (`qbittorrent.nix`), no reconciler step needed.
   - **Seerr first-run wizard** (`/api/v1/auth/jellyfin` → `/api/v1/settings/jellyfin` → `/api/v1/settings/initialize`) — if `media/jellyfin-admin-{username,password}` are set in sops, the host-side reconciler logs into Jellyfin via Seerr, creates the mirror admin user, persists the Jellyfin connection (including `externalHostname = https://jellyfin.lan.valgrindr.net` for UI deep-links), and flips `public.initialized`. Jellyfin's own first-run wizard is **not** automated — its `/Startup/...` API is version-fragile, so we leave that as a single manual step (see Bootstrap §2). Skip the sops seed and the reconciler logs + moves on; Seerr's wizard can be done manually instead.
-  - **Seerr → Sonarr / Radarr** (`/api/v1/settings/sonarr` and `/api/v1/settings/radarr`) — runs after the wizard auto-run (or whenever `settings.json.initialized = true`). Reconciled via the bifrost edge URLs (`sonarr.lan.valgrindr.net:443` / `radarr.lan.valgrindr.net:443`) because Seerr lives on the host and PREROUTING DNAT to the netns only fires for incoming connections.
+  - **Seerr → Sonarr / Radarr** (`/api/v1/settings/sonarr` and `/api/v1/settings/radarr`) — runs after the wizard auto-run (or whenever `settings.json.initialized = true`). Reconciled via the public edge URLs (`sonarr.lan.valgrindr.net:443` / `radarr.lan.valgrindr.net:443`, now answered by asgard's own Caddy) because Seerr lives in the main netns and PREROUTING DNAT to the Mullvad netns only fires for incoming connections — so it can't shortcut to `127.0.0.1`, it goes back out through Caddy.
 
 The reconciler is **best-effort**: any failed step is logged and skipped, the unit always exits 0. Inspect `journalctl -u media-bootstrap` after a deploy to see what landed.
 
@@ -177,17 +181,17 @@ Mullvad's official conf includes `DNS = 10.64.0.1`. VPN-Confinement also routes 
 ## Adding a new service to this stack
 
 1. Drop a file in this folder, listing it in `default.nix`.
-2. Decide: confined or unconfined? If confined, add `systemd.services.<name>.vpnConfinement = { enable = true; vpnNamespace = "mullvad"; }` and an entry to `vpnNamespaces.mullvad.portMappings`.
-3. Pattern-B firewall: open the port to `192.168.1.55` only.
-4. Add a Caddy handle in `hosts/bifrost/services/media-proxies.nix`.
-5. Add an AdGuard rewrite in `hosts/bifrost/services/dns.nix`.
+2. Decide: confined or unconfined? If confined, add `systemd.services.<name>.vpnConfinement = { enable = true; vpnNamespace = "mullvad"; }` and an entry to `vpnNamespaces.mullvad.portMappings` (the mapping doubles as the in-namespace INPUT ACCEPT that lets local Caddy reach the veth).
+3. No firewall hole — backends listen on loopback (unconfined) or the netns veth (confined); only Caddy reaches them.
+4. Add a vhost to `media/caddy.nix`: unconfined → `reverse_proxy 127.0.0.1:<port>`; confined → `reverse_proxy 192.168.15.1:<port>`.
+5. Add an AdGuard rewrite in `hosts/bifrost/services/dns.nix` pointing the name at `192.168.1.54` (asgard).
 6. Add a Homepage tile in the "Media (asgard)" group in `hosts/bifrost/services/homepage.nix`.
 7. Decide on persistence: static user → straight `environment.persistence`; DynamicUser → check for a `dataDir`-style escape hatch first. If none, accept ephemeral and add a TODO.
 8. If it has an API key the reconciler needs, add an extractor to that pipeline.
 
 ## Recovery cheats
 
-- **Service starts but the WebUI is unreachable from bifrost**: check the netns port mapping is published. `ip netns exec mullvad ss -ltnp` inside the namespace shows what's actually listening; `sudo iptables -t nat -L | grep <port>` shows the host-side DNAT.
+- **Service starts but the WebUI 502s through Caddy**: for a confined service, confirm Caddy can reach the veth — `curl -sI http://192.168.15.1:<port>` from asgard's main netns should answer. `ip netns exec mullvad ss -ltnp` shows what's actually listening inside the namespace; the `portMappings` entry must still be declared (it installs the in-namespace veth INPUT ACCEPT). For an unconfined service, `curl -sI http://127.0.0.1:<port>`.
 - **Sonarr/Radarr can't reach qBittorrent**: confirm both are in the `mullvad` namespace (`systemctl show <svc> | grep NetworkNamespacePath`). The download client URL must be `http://127.0.0.1:8080` (namespace loopback), not the host IP.
 - **Recyclarr fails with "401 Unauthorized"**: `recyclarr-credentials.service` ran but staged a stale or wrong key. `journalctl -u recyclarr-credentials` will show the extraction; verify the `<ApiKey>` element in `/var/lib/sonarr/config.xml` matches the running instance.
 - **Bootstrap reconciler reports `POST … failed (401|403)`**: the *arr's API key extracted from `config.xml` doesn't match what the running instance expects (typically because the *arr restarted and rolled its key after `media-bootstrap.service` started but before it raced ahead). Run `systemctl restart media-bootstrap` manually; if it persists, check `<ApiKey>` ↔ running-state alignment via the *arr's UI.

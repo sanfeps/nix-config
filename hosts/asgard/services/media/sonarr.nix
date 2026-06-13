@@ -46,6 +46,10 @@ in {
     vpnNamespace = "mullvad";
   };
 
+  # portMappings stays declared even though asgard's local Caddy reaches Sonarr
+  # via the netns veth IP (192.168.15.1:${toString port}) rather than the
+  # host-side DNAT: the mapping is what installs the in-namespace veth INPUT
+  # ACCEPT rule for ${toString port}. See media/caddy.nix for the full reasoning.
   vpnNamespaces.mullvad.portMappings = [
     {
       from = port;
@@ -53,8 +57,4 @@ in {
       protocol = "tcp";
     }
   ];
-
-  networking.firewall.extraCommands = ''
-    iptables -I nixos-fw -p tcp --dport ${toString port} -s 192.168.1.55 -j nixos-fw-accept
-  '';
 }

@@ -10,5 +10,6 @@
     ./seerr.nix
     ./recyclarr.nix
     ./bootstrap.nix
+    ./caddy.nix
   ];
 }

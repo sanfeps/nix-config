@@ -5,22 +5,19 @@
 # process loses egress entirely (kill-switch by construction — the netns
 # has no default route outside WireGuard).
 #
-# Inbound (WebUI): VPN-Confinement forwards host:8080 → namespace:8080.
-# Pattern-B firewall on the host limits the LAN side to bifrost only;
-# Caddy on bifrost (Phase 4) will reverse-proxy
-# https://qbittorrent.lan.valgrindr.net → 192.168.1.54:8080.
+# Inbound (WebUI): asgard's own Caddy (per-host-caddy Phase 4) terminates TLS
+# and reverse-proxies https://qbittorrent.lan.valgrindr.net → the netns veth
+# IP 192.168.15.1:8080. Caddy connects over the mullvad-br bridge, so
+# qBittorrent sees the source as 192.168.15.5 (the host bridge IP), not the
+# original client — hence 192.168.15.0/24 is whitelisted below. See
+# media/caddy.nix for the netns ingress reasoning.
 #
-# Auth: WebUI password skipped on LAN + tailnet via AuthSubnetWhitelist.
-# The Pattern-B firewall already gates who can reach the port; the netns
-# accessibleFrom gates it again. No PBKDF2 hash to maintain in sops.
+# Auth: WebUI password skipped on LAN + tailnet + the bridge via
+# AuthSubnetWhitelist. The netns accessibleFrom gates who can reach the port.
+# No PBKDF2 hash to maintain in sops.
 #
 # Torrenting port: null. Mullvad does not forward ports, so we'd never
 # accept incoming connections anyway. Leecher-only by design.
-#
-# Testing the WebUI during Phase 2 (before Caddy is wired in Phase 4):
-# SSH-jump through bifrost — `ssh -L 8080:192.168.1.54:8080 sanfe@bifrost`
-# and hit http://localhost:8080 in the browser. The bifrost-only firewall
-# rule is what blocks direct LAN access until Caddy lands.
 let
   webuiPort = 8080;
 in {
@@ -43,14 +40,16 @@ in {
           # (Sonarr/Radarr live in the same netns and reach qBittorrent at
           # 127.0.0.1, so loopback must be whitelisted for downloads to flow
           # without a password being baked into the *arrs' download-client
-          # config; the bootstrap reconciler relies on this too).
+          # config; the bootstrap reconciler relies on this too) + the
+          # mullvad-br bridge (192.168.15.0/24) so asgard's local Caddy, which
+          # proxies in from 192.168.15.5, is auth-bypassed too.
           AuthSubnetWhitelistEnabled = true;
-          AuthSubnetWhitelist = "192.168.1.0/24,100.64.0.0/10,127.0.0.1/32";
+          AuthSubnetWhitelist = "192.168.1.0/24,100.64.0.0/10,127.0.0.1/32,192.168.15.0/24";
 
-          # Caddy on bifrost rewrites the Host header.
+          # Caddy rewrites the Host header.
           HostHeaderValidation = false;
 
-          # TLS terminates on bifrost.
+          # TLS terminates on asgard's Caddy.
           HTTPS.Enabled = false;
         };
       };
@@ -84,8 +83,10 @@ in {
     vpnNamespace = "mullvad";
   };
 
-  # Publish the WebUI back to the host. The list merges with future *arr
-  # entries that VPN-Confinement also exposes.
+  # portMappings stays declared even though local Caddy reaches the WebUI via
+  # the netns veth IP (192.168.15.1:8080) rather than the host-side DNAT: the
+  # mapping installs the in-namespace veth INPUT ACCEPT rule for 8080. See
+  # media/caddy.nix. The list merges with the *arr entries.
   vpnNamespaces.mullvad.portMappings = [
     {
       from = webuiPort;
@@ -93,9 +94,4 @@ in {
       protocol = "tcp";
     }
   ];
-
-  # Pattern-B firewall: only bifrost reaches asgard:8080 from the LAN.
-  networking.firewall.extraCommands = ''
-    iptables -I nixos-fw -p tcp --dport ${toString webuiPort} -s 192.168.1.55 -j nixos-fw-accept
-  '';
 }

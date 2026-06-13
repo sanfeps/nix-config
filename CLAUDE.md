@@ -314,7 +314,7 @@ Ingress is per-host: the host that runs the service also terminates TLS for it. 
 
 No firewall holes for backend ports, no cross-host Caddy handles, no `trusted_proxies` plumbing — Caddy and the backend share `127.0.0.1`.
 
-> **Legacy migration in progress.** Firefly III, Ghostfolio, and Home Assistant still route via bifrost's edge Caddy until per-host-Caddy Phases 2–3 land (see `docs/per-host-caddy-migration-plan.md`). New services follow the single pattern above; the legacy services will be reshaped to match.
+> **Migration status.** All asgard apps (Immich, Ghostfolio, Home Assistant, Firefly, and the media stack) now front themselves with asgard's own Caddy — per-host-Caddy Phases 1–4 are done (see `docs/per-host-caddy-migration-plan.md`). Bifrost no longer proxies any asgard service. What remains is Phase 5 (shrink bifrost's Caddy to its own local services + retire the lan-expose plan doc) and the forward-looking Phase 6 (Authentik re-scope).
 
 > **Public-domain exception**: `headscale.valgrindr.net` is public ingress (router → bifrost, LE via HTTP-01). That vhost lives in `hosts/bifrost/services/caddy.nix` and stays there — public ingress is out of scope for the per-host model.
 

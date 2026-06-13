@@ -92,34 +92,36 @@ in {
             answer = bifrostIp;
             enabled = true;
           }
+          # per-host-caddy Phase 4: the media stack is fronted by asgard's own
+          # Caddy (vhosts in hosts/asgard/services/media/caddy.nix).
           {
             domain = "jellyfin.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
           {
             domain = "seerr.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
           {
             domain = "qbittorrent.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
           {
             domain = "prowlarr.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
           {
             domain = "sonarr.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
           {
             domain = "radarr.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
           {

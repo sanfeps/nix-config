@@ -11,15 +11,14 @@
 # exposed by default. Enabling later means passing through a GPU at the
 # VM level + flipping `hardwareAcceleration.{enable,type,device}`.
 #
-# TLS: terminated on bifrost. Listening on 8096 plain HTTP is fine — the
-# Pattern-B firewall locks the port to 192.168.1.55, so no plaintext
-# traffic ever crosses the LAN unaddressed.
-let
-  port = 8096;
-in {
+# TLS: terminated by asgard's own Caddy (per-host-caddy Phase 4), which
+# reverse-proxies https://jellyfin.lan.valgrindr.net → 127.0.0.1:8096. The
+# WebUI binds 0.0.0.0 but no firewall hole is opened, so only loopback (Caddy)
+# reaches it; plaintext never crosses the LAN.
+{
   services.jellyfin = {
     enable = true;
-    openFirewall = false; # Pattern-B handles this.
+    openFirewall = false; # local Caddy fronts it on loopback.
     # dataDir, cacheDir, configDir all default under /var/lib/jellyfin —
     # see persistence below.
   };
@@ -38,9 +37,4 @@ in {
       mode = "0700";
     }
   ];
-
-  # Pattern-B firewall: only bifrost reaches asgard:8096.
-  networking.firewall.extraCommands = ''
-    iptables -I nixos-fw -p tcp --dport ${toString port} -s 192.168.1.55 -j nixos-fw-accept
-  '';
 }
