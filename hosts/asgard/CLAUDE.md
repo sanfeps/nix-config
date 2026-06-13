@@ -13,7 +13,7 @@ Asgard used to also own networking (AdGuard, headscale, DDNS, exit-node). All of
 All live under `services/` and are wired in `services/default.nix`:
 
 - **`finances/`** — shared PostgreSQL (TCP on `127.0.0.1` so containers can connect via `--network=host`) + per-app modules:
-  - **Firefly III** at `https://firefly.lan.valgrindr.net` (native NixOS module, peer auth via socket, php_fastcgi via Unix socket). TLS terminates on bifrost; bifrost proxies plain HTTP to asgard:80, where a tiny local Caddy translates HTTP→FastCGI to PHP-FPM's socket (the socket can't be reached across hosts, which is why asgard keeps Caddy at all). Caveat: trusted-proxy handling in Firefly is unreliable, so asgard's `php_fastcgi` lies to PHP with `env HTTPS on` + `env SERVER_PORT 443` — Symfony then thinks the connection is https and Laravel emits https:// URLs everywhere.
+  - **Firefly III** at `https://firefly.lan.valgrindr.net` (native NixOS module, peer auth via socket, php_fastcgi via Unix socket). Fronted by asgard's local Caddy (per-host-caddy Phase 3): Caddy terminates TLS itself and talks straight to PHP-FPM's socket, so PHP sees a genuine https:// request — no more `env HTTPS on` / `env SERVER_PORT 443` lie, no trust-proxy plumbing. AdGuard rewrites the name directly to `192.168.1.54`; bifrost is not in the request path.
   - **Ghostfolio** (Podman container on TCP+scram auth, local Redis on `127.0.0.1:6379`). Container binds `127.0.0.1:3333` (via the module's `host` option) and is fronted by asgard's local Caddy at `https://ghostfolio.lan.valgrindr.net`. AdGuard rewrites the name directly to `192.168.1.54`; bifrost is not in the request path.
   - Secrets come from sops via `sops.templates` rendered into env / SQL files at activation. **Ghostfolio user accounts are not declarative**: passwordless model with server-side tokens stored hashed in Postgres (`Account` table). The current user's token is stashed in sops at `finances/ghostfolio-user-token` purely as a recovery aid — on a from-scratch rebuild, restore the Postgres dump (`/persist/var/backups/postgres/`) **before** logging in; if the DB is empty Ghostfolio mints a new token and the one in sops becomes useless.
   - **`fly-import`** CLI for Kutxabank PDFs.
@@ -36,7 +36,7 @@ Per-host-Caddy migration status (`docs/per-host-caddy-migration-plan.md`):
 - **Immich** — fronted by local Caddy (Phase 1 ✓).
 - **Ghostfolio** — fronted by local Caddy (Phase 2a ✓).
 - **Home Assistant** — fronted by local Caddy (Phase 2b ✓).
-- **Firefly III** — legacy: vhost still binds plain `:80` HTTP and bifrost terminates TLS in front of it; the PHP-FPM Unix socket bridge stays in `hosts/asgard/services/finances/firefly.nix` until Phase 3.
+- **Firefly III** — fronted by local Caddy (Phase 3 ✓). Caddy terminates TLS and proxies straight to the PHP-FPM Unix socket.
 
 ## Deploys
 
@@ -52,5 +52,5 @@ NIX_SSHOPTS="-i ~/.ssh/lykill" nixos-rebuild switch --flake .#asgard \
 
 ## Recovery cheats
 
-- **Caddy 502 on a vhost (from outside)**: figure out where the vhost terminates. For migrated services (Immich, Ghostfolio, Home Assistant) the answer is asgard (`systemctl status caddy` + `journalctl -u caddy -n 100`); for legacy Firefly it's still bifrost.
-- **`*.lan.valgrindr.net` not resolving from the LAN**: AdGuard on bifrost (`192.168.1.55`) owns LAN DNS. Check `nc -vz 192.168.1.55 53` from the client. The rewrite answer determines which host the request lands on — asgard for migrated services, bifrost for legacy ones.
+- **Caddy 502 on a vhost (from outside)**: every asgard app (Immich, Ghostfolio, Home Assistant, Firefly) now terminates TLS on asgard — check `systemctl status caddy` + `journalctl -u caddy -n 100` here. Only bifrost-local names (adguard, homepage, headplane, headscale) terminate on bifrost.
+- **`*.lan.valgrindr.net` not resolving from the LAN**: AdGuard on bifrost (`192.168.1.55`) owns LAN DNS. Check `nc -vz 192.168.1.55 53` from the client. The rewrite answer determines which host the request lands on — `192.168.1.54` for asgard apps, `192.168.1.55` for bifrost-local services.

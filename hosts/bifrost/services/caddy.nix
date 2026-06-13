@@ -15,18 +15,14 @@
 
     # Single wildcard vhost: one LE cert covers every *.lan.valgrindr.net
     # subdomain. Per-service routing happens via @host matchers + handle blocks.
-    # adguard is local; home talks straight to its listener on asgard; firefly
-    # bounces off asgard's tiny Caddy because PHP-FPM speaks FastCGI over a
-    # Unix socket (HTTP can't cross hosts to that socket).
+    # Only bifrost-local services live here now — adguard (local), plus the
+    # homepage/headplane handles declared in their own modules. Every asgard
+    # app (immich, ghostfolio, home, firefly) terminates TLS on asgard's own
+    # Caddy and is reached directly via its AdGuard rewrite.
     virtualHosts."*.lan.valgrindr.net".extraConfig = ''
       @adguard host adguard.lan.valgrindr.net
       handle @adguard {
         reverse_proxy 127.0.0.1:3000
-      }
-
-      @firefly host firefly.lan.valgrindr.net
-      handle @firefly {
-        reverse_proxy 192.168.1.54:80
       }
 
       handle {

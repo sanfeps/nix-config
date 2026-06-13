@@ -3,9 +3,9 @@
   lib,
   ...
 }: let
-  # bifrost owns DNS and TLS termination for every *.lan.valgrindr.net name.
-  # firefly's php_fastcgi socket forces a tiny local Caddy on asgard, but the
-  # public entry point is still bifrost (HTTPS) → asgard:80 (HTTP→FastCGI).
+  # bifrost owns LAN DNS. Each rewrite points a *.lan.valgrindr.net name at the
+  # host that terminates TLS for it: bifrost-local services → bifrostIp, asgard
+  # apps (immich, ghostfolio, home, firefly) → asgardIp (their own Caddy).
   bifrostIp = "192.168.1.55";
   asgardIp = "192.168.1.54";
   lanZone = "lan.valgrindr.net";
@@ -76,11 +76,10 @@ in {
             enabled = true;
           }
           {
-            # firefly's php_fastcgi socket still lives on asgard, but bifrost
-            # terminates TLS and reverse-proxies HTTP to asgard:80 (where the
-            # local Caddy translates HTTP↔FastCGI against the Unix socket).
+            # per-host-caddy Phase 3: firefly is fronted by asgard's own Caddy,
+            # which terminates TLS and talks straight to PHP-FPM's Unix socket.
             domain = "firefly.${lanZone}";
-            answer = bifrostIp;
+            answer = asgardIp;
             enabled = true;
           }
           {
