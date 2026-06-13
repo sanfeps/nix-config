@@ -74,3 +74,4 @@ Register it in `default.nix`:
 ## Current modules
 
 - `services/immich/` — Immich photo/video library (the canary). `homelab.services.immich.{enable,url,host,port,mediaLocation,machineLearning}`. Owns the upstream `services.immich`, the local-Caddy vhost, and `/var/lib/immich` persistence. The pre-NAS `/mnt/nas/immich` tmpfiles backing stays in `hosts/asgard/services/immich.nix` (host-specific).
+- `services/home-assistant/` — Home Assistant. `homelab.services.homeAssistant.{enable,url,port,name,extraConfig}`. Owns the behind-Caddy `http` block, the first-boot `!include`-target seeding + include-dir scaffolding, configDir persistence, and the vhost. `extraConfig` deep-merges (`recursiveUpdate`) over the baseline for host-specific config (e.g. asgard's mqtt broker, set in `hosts/asgard/services/home-automation/home-assistant.nix`). Mosquitto stays a separate host file — it's a distinct service, not part of the HA wrapper.

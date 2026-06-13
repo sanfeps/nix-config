@@ -6,4 +6,5 @@
   #
   # See docs/services-reusable-modules-plan.md for the design rationale.
   immich = import ./services/immich;
+  home-assistant = import ./services/home-assistant;
 }
