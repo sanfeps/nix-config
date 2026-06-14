@@ -18,9 +18,16 @@
 # can traverse each other's paths without one impersonating the other. Each
 # service module adds its own user to this group.
 {
+  # The `media`-group dirs are setgid (2775): the shared-group design only works
+  # for *writes* if new subdirectories inherit group `media` (setgid) and stay
+  # group-writable (the 7 in the middle). Without this, a folder created by one
+  # media-group member (e.g. the yt2jelly daemon, or sonarr/radarr, or a manual
+  # `yt2jelly` CLI run as sanfe) lands under the *creator's primary group* with
+  # no group-write, and the next member is locked out with "Permission denied".
+  # Pair with `umask 002` in the writers (see music-dl.nix) so files land 0664.
   systemd.tmpfiles.rules = [
     "d /srv/media           0755 root root  -"
-    "d /srv/media/downloads 0775 root media -"
+    "d /srv/media/downloads 2775 root media -"
 
     # TEMP(no-nas): back /mnt/nas/media/library with local dirs so the whole
     # stack can be validated end-to-end before the NAS lands. When the
@@ -29,10 +36,10 @@
     # Remove these six lines at the same time the mount is wired in.
     "d /mnt/nas                    0755 root root  -"
     "d /mnt/nas/media              0755 root root  -"
-    "d /mnt/nas/media/library      0775 root media -"
-    "d /mnt/nas/media/library/tv     0775 root media -"
-    "d /mnt/nas/media/library/movies 0775 root media -"
-    "d /mnt/nas/media/library/music  0775 root media -"
+    "d /mnt/nas/media/library      2775 root media -"
+    "d /mnt/nas/media/library/tv     2775 root media -"
+    "d /mnt/nas/media/library/movies 2775 root media -"
+    "d /mnt/nas/media/library/music  2775 root media -"
   ];
 
   users.groups.media = {};

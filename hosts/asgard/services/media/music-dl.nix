@@ -40,6 +40,14 @@ let
       MUSIC_LIB="''${MUSIC_LIB:-/mnt/nas/media/library/music}"
       AUDIO_FORMAT="''${AUDIO_FORMAT:-mp3}"
 
+      # Create dirs/files group-writable so any `media`-group member (this daemon
+      # as user yt2jelly, or a manual CLI run as sanfe) can write into folders
+      # the other one created. Combined with the setgid bit on the library tree
+      # (storage.nix) new artist dirs land 2775 root→media and files 0664. Without
+      # this the default 022 umask makes them 0755/0644 and cross-user writes fail
+      # with "Permission denied" (see git log: the Melendi/Singles lockout).
+      umask 002
+
       if [ "$#" -eq 0 ]; then
         echo "usage: yt2jelly <youtube-url> [more-urls...]" >&2
         echo "  env: MUSIC_LIB (default $MUSIC_LIB), AUDIO_FORMAT (mp3)," >&2
