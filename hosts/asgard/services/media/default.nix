@@ -8,6 +8,7 @@
     ./radarr.nix
     ./jellyfin.nix
     ./music-dl.nix
+    ./yt2jelly-ui.nix
     ./seerr.nix
     ./recyclarr.nix
     ./bootstrap.nix
