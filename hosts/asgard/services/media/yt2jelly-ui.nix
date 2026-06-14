@@ -16,14 +16,19 @@
 #     /jobs over loopback. No token duplicated into sops.
 #   - the YouTube Data API key comes from sops (`media/youtube-api-key`) via an
 #     EnvironmentFile, exactly like the jellyfin-admin creds in music-dl.nix.
-#   - binds 127.0.0.1:5050, fronted by asgard's own Caddy at
-#     music.lan.valgrindr.net. Needs the matching AdGuard rewrite in
-#     hosts/bifrost/services/dns.nix (music -> asgard 192.168.1.54).
+#   - binds 0.0.0.0:5050; on the LAN only loopback (Caddy) reaches it (no LAN
+#     firewall hole) and it's fronted at music.lan.valgrindr.net — needs the
+#     AdGuard rewrite in hosts/bifrost/services/dns.nix (music -> 192.168.1.54).
+#   - tailnet guests reach it directly at http://asgard.ts.yggdrasil.lo:5050
+#     (:5050 opened on tailscale0 only), gated by the headscale ACL
+#     (group:guest -> asgard:5050). Same exposure pattern as jellyfin.nix.
 #
-# Trust model: the UI itself is UNAUTHENTICATED on the LAN — it holds the token
-# and exposes an open proxy, the same posture as the Flask PR and as the *arrs'
-# local-address auth bypass. If you want a gate, add `basic_auth` to the Caddy
-# vhost at the bottom; the backend stays loopback-only either way.
+# Trust model: the UI is UNAUTHENTICATED — it holds the token and exposes an open
+# proxy. On the LAN that's the same posture as the *arrs' local-address bypass;
+# on the tailnet, access is gated by the headscale ACL (only enrolled guests).
+# So a guest with the UI can search YouTube (your API quota) and add songs to the
+# shared Jellyfin library — intended for trusted family/guests. If you want a
+# gate anyway, add `basic_auth` to the Caddy vhost (LAN side only).
 let
   indexHtml =
     pkgs.writeText "yt2jelly-ui-index.html"
@@ -248,7 +253,10 @@ in {
     after = ["network-online.target" "yt2jellyd.service"];
     wants = ["network-online.target"];
     environment = {
-      YT2JELLY_UI_HOST = "127.0.0.1";
+      # 0.0.0.0 so the tailscale0 firewall hole below can reach it; no LAN hole
+      # is opened, so on the LAN only loopback (Caddy) gets in. Same pattern as
+      # jellyfin.nix's tailnet guest exposure.
+      YT2JELLY_UI_HOST = "0.0.0.0";
       YT2JELLY_UI_PORT = "5050";
       YT2JELLY_UI_INDEX = "${indexHtml}";
       YT2JELLYD_URL = "http://127.0.0.1:8398";
@@ -274,4 +282,12 @@ in {
   services.caddy.virtualHosts."music.lan.valgrindr.net".extraConfig = ''
     reverse_proxy 127.0.0.1:5050
   '';
+
+  # Tailnet guest access (same pattern as jellyfin.nix :8096): open :5050 on the
+  # tailscale0 interface only — NOT the LAN. Tailnet peers reach the UI directly
+  # over the WireGuard-encrypted link (http://asgard.ts.yggdrasil.lo:5050). WHICH
+  # peers is gated by the headscale ACL (group:guest -> asgard:5050 in
+  # hosts/bifrost/services/headscale.nix), not by this rule. No TLS: the tailnet
+  # link is already encrypted.
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [5050];
 }

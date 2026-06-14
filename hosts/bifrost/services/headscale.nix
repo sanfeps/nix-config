@@ -25,10 +25,11 @@
   # rule, just scoped to a group so guests don't inherit it. group:exit-approvers
   # auto-approves bifrost's exit-node routes (unchanged).
   #
-  # group:guest is for shared-access users (e.g. a friend who only gets
-  # Jellyfin). Members reach ONLY asgard:8096 (Jellyfin over the tailnet) and
-  # the DNS server on bifrost:53 — the latter because override_local_dns pushes
-  # all of their DNS to 100.64.0.3, so blocking it would break their resolver.
+  # group:guest is for shared-access users (e.g. a friend who gets Jellyfin +
+  # the music UI). Members reach ONLY asgard:8096 (Jellyfin) and asgard:5050
+  # (yt2jelly-ui, the YouTube→Jellyfin music adder) over the tailnet, plus the
+  # DNS server on bifrost:53 — the latter because override_local_dns pushes all
+  # of their DNS to 100.64.0.3, so blocking it would break their resolver.
   # Everything else (other services, the LAN, the exit node) is denied by
   # omission. Create the matching headscale user with `headscale users create
   # guest`; add more "<user>@" entries here for more guests.
@@ -45,7 +46,7 @@
       },
       "acls": [
         {"action": "accept", "src": ["group:admin"], "dst": ["*:*"]},
-        {"action": "accept", "src": ["group:guest"], "dst": ["asgard:8096", "dns-server:53"]}
+        {"action": "accept", "src": ["group:guest"], "dst": ["asgard:8096", "asgard:5050", "dns-server:53"]}
       ],
       "autoApprovers": {
         "exitNode": ["group:exit-approvers"],
