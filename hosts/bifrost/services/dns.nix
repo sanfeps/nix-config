@@ -130,6 +130,13 @@ in {
             answer = asgardIp;
             enabled = true;
           }
+          {
+            # yt2jellyd — phone-friendly HTTP wrapper for yt2jelly, fronted by
+            # asgard's own Caddy (vhost in hosts/asgard/services/media/music-dl.nix).
+            domain = "yt2jelly.${lanZone}";
+            answer = asgardIp;
+            enabled = true;
+          }
         ];
       };
     };

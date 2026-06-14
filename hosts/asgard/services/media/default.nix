@@ -7,6 +7,7 @@
     ./sonarr.nix
     ./radarr.nix
     ./jellyfin.nix
+    ./music-dl.nix
     ./seerr.nix
     ./recyclarr.nix
     ./bootstrap.nix

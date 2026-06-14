@@ -26,12 +26,13 @@
     # stack can be validated end-to-end before the NAS lands. When the
     # fileSystems block below is uncommented, the NFS automount overlays
     # /mnt/nas/media and these underlying dirs become invisible (harmless).
-    # Remove these five lines at the same time the mount is wired in.
+    # Remove these six lines at the same time the mount is wired in.
     "d /mnt/nas                    0755 root root  -"
     "d /mnt/nas/media              0755 root root  -"
     "d /mnt/nas/media/library      0775 root media -"
     "d /mnt/nas/media/library/tv     0775 root media -"
     "d /mnt/nas/media/library/movies 0775 root media -"
+    "d /mnt/nas/media/library/music  0775 root media -"
   ];
 
   users.groups.media = {};
