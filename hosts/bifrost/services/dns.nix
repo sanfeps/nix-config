@@ -137,6 +137,13 @@ in {
             answer = asgardIp;
             enabled = true;
           }
+          {
+            # yt2jelly-ui — browser frontend for yt2jellyd, fronted by asgard's
+            # own Caddy (vhost in hosts/asgard/services/media/yt2jelly-ui.nix).
+            domain = "music.${lanZone}";
+            answer = asgardIp;
+            enabled = true;
+          }
         ];
       };
     };
