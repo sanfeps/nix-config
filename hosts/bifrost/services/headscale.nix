@@ -8,6 +8,8 @@
   tailnetDomain = "ts.yggdrasil.lo";
   derpPort = 3478;
   bootstrapUser = "yggdrasil";
+  adminUsers = [bootstrapUser "family"];
+  adminGroupMembers = lib.concatMapStringsSep ", " (u: ''"${u}@"'') adminUsers;
 
   # Guest users exist purely so the ACL can scope them (group:guest) and so the
   # policy reference stays valid across a DB rebuild. Unlike bootstrapUser they
@@ -18,8 +20,8 @@
   guestGroupMembers = lib.concatMapStringsSep ", " (u: ''"${u}@"'') guestUsers;
   # Tailscale-compatible policy v2 (HuJSON).
   #
-  # group:admin (all the owner's nodes, enrolled under the ${bootstrapUser}
-  # user) keeps blanket access — same effective reach as the old default-allow
+  # group:admin (all trusted users' nodes) keeps blanket access — same effective
+  # reach as the old default-allow
   # rule, just scoped to a group so guests don't inherit it. group:exit-approvers
   # auto-approves bifrost's exit-node routes (unchanged).
   #
@@ -33,8 +35,8 @@
   policyFile = pkgs.writeText "headscale-policy.hujson" ''
     {
       "groups": {
-        "group:admin": ["${bootstrapUser}@"],
-        "group:exit-approvers": ["${bootstrapUser}@"],
+        "group:admin": [${adminGroupMembers}],
+        "group:exit-approvers": [${adminGroupMembers}],
         "group:guest": [${guestGroupMembers}]
       },
       "hosts": {
@@ -142,7 +144,9 @@ in {
       done
       sqlite3 "$DB" "SELECT 1 FROM users LIMIT 1;" >/dev/null
 
-      sqlite3 "$DB" "INSERT OR IGNORE INTO users (name, created_at, updated_at) VALUES ('${bootstrapUser}', datetime('now'), datetime('now'));"
+      # Admin users have full ACL access. Only ${bootstrapUser} gets the
+      # reusable declarative preauth key below; create family keys on demand.
+      ${lib.concatMapStringsSep "\n" (u: ''sqlite3 "$DB" "INSERT OR IGNORE INTO users (name, created_at, updated_at) VALUES ('${u}', datetime('now'), datetime('now'));"'') adminUsers}
 
       # Guest users (no preauth key — keys are minted imperatively on demand).
       ${lib.concatMapStringsSep "\n" (u: ''sqlite3 "$DB" "INSERT OR IGNORE INTO users (name, created_at, updated_at) VALUES ('${u}', datetime('now'), datetime('now'));"'') guestUsers}
