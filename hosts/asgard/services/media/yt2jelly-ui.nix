@@ -227,7 +227,12 @@ in {
   environment.systemPackages = [yt2jelly-ui];
 
   # YouTube Data API key (add it with: sops hosts/asgard/secrets.yaml ->
-  # media/youtube-api-key). Rendered into an EnvironmentFile for the service.
+  # media/youtube-api-key). Declared so the placeholder below resolves, then
+  # rendered into an EnvironmentFile for the service.
+  sops.secrets."media/youtube-api-key" = {
+    mode = "0400";
+  };
+
   sops.templates."yt2jelly-ui-env" = {
     content = ''
       YOUTUBE_API_KEY=${config.sops.placeholder."media/youtube-api-key"}
