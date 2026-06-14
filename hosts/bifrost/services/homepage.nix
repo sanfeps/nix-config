@@ -90,6 +90,13 @@ in {
             };
           }
           {
+            "Music" = {
+              href = "https://music.lan.valgrindr.net";
+              description = "Add YouTube songs to Jellyfin";
+              icon = "youtube.png";
+            };
+          }
+          {
             "Seerr" = {
               href = "https://seerr.lan.valgrindr.net";
               description = "Request manager";
