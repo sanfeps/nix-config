@@ -325,6 +325,18 @@
       height: 100%;
       border: none;
     }
+    .player-hint {
+      margin: 8px 0 0;
+      font-size: 0.78rem;
+      line-height: 1.35;
+      color: var(--muted);
+    }
+    .player-hint:empty { display: none; }
+
+    /* Audio (background) player — shown by the 🎧 Listen button. */
+    .audio-box { display: none; }
+    .audio-box.active { display: block; }
+    .audio-box audio { width: 100%; display: block; }
 
     /* ── Jobs ──────────────────────────────────────────────────── */
     #jobs-list { display: flex; flex-direction: column; gap: 8px; }
@@ -503,13 +515,48 @@ async function doSearch() {
       return;
     }
 
-    data.results.forEach(r => resultsEl.appendChild(makeCard(r)));
+    data.results.forEach((r, idx) => {
+      const card = makeCard(r);
+      resultsEl.appendChild(card);
+      // The top result is the most likely pick — warm it immediately so 🎧
+      // Listen on it is near-instant, without needing to open the card first.
+      if (idx === 0) prewarmCard(card, r.id);
+    });
 
   } catch {
     hint.textContent = 'Network error. Is yt2jelly-ui running?';
   } finally {
     searchBtn.disabled = false;
   }
+}
+
+// Stop every open player (video iframe or audio) across all cards and reset
+// their buttons/labels. Called before starting a new one so only one plays.
+function stopAllPlayers() {
+  document.querySelectorAll('.player-wrap.open').forEach(p => {
+    p.classList.remove('open');
+    p.querySelector('iframe')?.remove();
+    const audio = p.querySelector('audio');
+    if (audio) { audio.pause(); audio.removeAttribute('src'); audio.remove(); }
+    p.querySelector('.js-audio-box')?.classList.remove('active');
+    const hint = p.querySelector('.js-player-hint');
+    if (hint) hint.textContent = '';
+    const card = p.closest('.result-card');
+    const vBtn = card?.querySelector('.js-play');
+    if (vBtn) vBtn.textContent = '📺 Video';
+    const lBtn = card?.querySelector('.js-listen');
+    if (lBtn) lBtn.textContent = '🎧 Listen';
+  });
+  if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
+}
+
+// Pre-warm a card's audio URL (resolve + cache it server-side) so a later
+// 🎧 Listen starts quickly — resolving is the slow part. Fire-and-forget, at
+// most once per card.
+function prewarmCard(card, videoId) {
+  if (card.dataset.prewarmed) return;
+  card.dataset.prewarmed = '1';
+  fetch(`/api/resolve?id=${encodeURIComponent(videoId)}`).catch(() => {});
 }
 
 // ── Result card ───────────────────────────────────────────────
@@ -549,7 +596,8 @@ function makeCard(r) {
       </div>
       <div class="panel-actions">
         <button class="btn-cancel js-cancel">Cancel</button>
-        <button class="btn-play js-play">▶ Play</button>
+        <button class="btn-play js-play">📺 Video</button>
+        <button class="btn-play js-listen">🎧 Listen</button>
         <button class="btn-add js-add">Add to Jellyfin</button>
       </div>
       <div class="panel-status" style="display:none"></div>
@@ -557,6 +605,8 @@ function makeCard(r) {
     <div class="player-wrap js-player-wrap">
       <hr class="add-divider">
       <div class="player-ratio js-player-ratio"></div>
+      <div class="audio-box js-audio-box"></div>
+      <p class="player-hint js-player-hint"></p>
     </div>
   `;
 
@@ -567,6 +617,7 @@ function makeCard(r) {
     if (opening) {
       card.classList.add('open');
       card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      prewarmCard(card, r.id);  // warm the URL when the card opens
     }
   });
 
@@ -577,30 +628,71 @@ function makeCard(r) {
 
   const playerWrap  = card.querySelector('.js-player-wrap');
   const playerRatio = card.querySelector('.js-player-ratio');
+  const audioBox    = card.querySelector('.js-audio-box');
+  const playerHint  = card.querySelector('.js-player-hint');
   const playBtn     = card.querySelector('.js-play');
+  const listenBtn   = card.querySelector('.js-listen');
 
   playBtn.addEventListener('click', e => {
     e.stopPropagation();
-    const isOpen = playerWrap.classList.contains('open');
-
-    // Stop any other playing card
-    document.querySelectorAll('.player-wrap.open').forEach(p => {
-      p.classList.remove('open');
-      p.querySelector('iframe')?.remove();
-      const btn = p.closest('.result-card')?.querySelector('.js-play');
-      if (btn) btn.textContent = '▶ Play';
-    });
-
-    if (!isOpen) {
+    const wasPlaying = playerRatio.querySelector('iframe') !== null;
+    stopAllPlayers();
+    if (!wasPlaying) {
       playerWrap.classList.add('open');
       const iframe = document.createElement('iframe');
-      iframe.src = `https://www.youtube-nocookie.com/embed/${r.id}?autoplay=1`;
+      // playsinline=1 keeps it from force-fullscreening on mobile. NOTE: a
+      // YouTube embed still pauses when the screen locks / you leave the tab —
+      // for true background playback use 🎧 Listen below (own <audio> element).
+      iframe.src = `https://www.youtube-nocookie.com/embed/${r.id}?autoplay=1&playsinline=1`;
       iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
       iframe.allowFullscreen = true;
       playerRatio.appendChild(iframe);
       playBtn.textContent = '■ Stop';
+      playerHint.textContent = '📺 Video preview — pauses when you lock the screen or leave the tab. Use 🎧 Listen for background playback.';
       card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
+  });
+
+  // 🎧 Listen — play the audio through an <audio> element this page owns, so
+  // the browser keeps it going with the screen off / browser backgrounded and
+  // surfaces lock-screen controls via the Media Session API. Audio is streamed
+  // from yt2jelly-ui's /api/stream (asgard resolves it with yt-dlp and proxies
+  // the bytes), not from YouTube directly — which is what makes this work.
+  listenBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const existing = audioBox.querySelector('audio');
+    const wasPlaying = existing !== null;
+    stopAllPlayers();
+    if (wasPlaying) return;
+
+    playerWrap.classList.add('open');
+    audioBox.classList.add('active');
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.autoplay = true;
+    audio.preload = 'none';
+    audio.src = `/api/stream?id=${encodeURIComponent(r.id)}`;
+    audioBox.appendChild(audio);
+    listenBtn.textContent = '■ Stop';
+    playerHint.textContent = '🎧 Streaming audio — keeps playing with the screen off or the browser in the background.';
+
+    if ('mediaSession' in navigator) {
+      const titleVal  = card.querySelector('.js-title').value.trim()  || r.title;
+      const artistVal = card.querySelector('.js-artist').value.trim() || r.channel;
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: titleVal,
+        artist: artistVal,
+        artwork: r.thumbnail ? [{ src: r.thumbnail, sizes: '320x180', type: 'image/jpeg' }] : [],
+      });
+      navigator.mediaSession.setActionHandler('play',  () => audio.play());
+      navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+    }
+
+    audio.addEventListener('error', () => {
+      playerHint.textContent = '⚠️ Could not stream this track. It may be unavailable — try ▶ Add to Jellyfin instead.';
+    });
+    audio.play().catch(() => {});
+    card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 
   card.querySelector('.js-add').addEventListener('click', async e => {
