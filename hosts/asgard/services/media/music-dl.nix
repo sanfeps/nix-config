@@ -51,7 +51,7 @@ let
       if [ "$#" -eq 0 ]; then
         echo "usage: yt2jelly <youtube-url> [more-urls...]" >&2
         echo "  env: MUSIC_LIB (default $MUSIC_LIB), AUDIO_FORMAT (mp3)," >&2
-        echo "       ARTIST/TITLE (override the auto-detected tags)" >&2
+        echo "       ARTIST/TITLE/ALBUM (override the auto-detected tags)" >&2
         exit 2
       fi
 
@@ -87,13 +87,28 @@ let
         [ -n "$artist" ] || artist="Unknown Artist"
         [ -n "$title" ] || title="$(basename "$f" ".$AUDIO_FORMAT")"
 
-        # If env overrides were given, write them back into the file too.
-        if [ -n "''${ARTIST:-}" ] || [ -n "''${TITLE:-}" ]; then
-          tagged="$STAGE/tagged.$AUDIO_FORMAT"
-          args=(-y -v error -i "$f" -map 0 -c copy -metadata "artist=$artist" -metadata "title=$title")
-          ffmpeg "''${args[@]}" "$tagged"
-          f="$tagged"
-        fi
+        # Album drives Jellyfin's grouping. Precedence: an explicit ALBUM=
+        # override wins; else respect the album YouTube embedded (real music
+        # videos carry it, e.g. "Curiosa La Cara De Tu Padre"); else bucket under
+        # "Singles". The fallback matters because a *blank* album tag makes
+        # Jellyfin guess an album by name-matching online, which mis-merges
+        # unrelated singles (see media/CLAUDE.md). "Singles" makes grouping
+        # deterministic; a correct embedded album is preserved as-is.
+        album="''${ALBUM:-}"
+        [ -n "$album" ] || album="$(ffprobe -v quiet -show_entries format_tags=album -of default=nw=1:nk=1 "$f" || true)"
+        [ -n "$album" ] || album="Singles"
+
+        # Always normalise tags into the file: artist/title (covers env
+        # overrides), the album resolved above, and album_artist — yt-dlp never
+        # sets album_artist, and without it a "feat." track scatters into a
+        # Various-Artists album. -c copy is a fast remux (no re-encode), the
+        # embedded thumbnail is carried through by -map 0.
+        tagged="$STAGE/tagged.$AUDIO_FORMAT"
+        ffmpeg -y -v error -i "$f" -map 0 -c copy \
+          -metadata "artist=$artist" -metadata "title=$title" \
+          -metadata "album=$album" -metadata "album_artist=$artist" \
+          "$tagged"
+        f="$tagged"
 
         # File it: $artist/Singles/$title (slashes neutralised so they can't
         # escape the layout).
@@ -222,7 +237,7 @@ let
             return "requested:" + str(response.status)
 
 
-    def run_job(job_id, url, artist, title):
+    def run_job(job_id, url, artist, title, album):
         env = os.environ.copy()
         env.update({
             "MUSIC_LIB": MUSIC_LIB,
@@ -232,6 +247,8 @@ let
             env["ARTIST"] = artist
         if title:
             env["TITLE"] = title
+        if album:
+            env["ALBUM"] = album
 
         with lock:
             jobs[job_id].update({"status": "running", "started_at": time.time()})
@@ -305,6 +322,7 @@ let
             url = (data.get("url") or "").strip()
             artist = (data.get("artist") or "").strip()
             title = (data.get("title") or "").strip()
+            album = (data.get("album") or "").strip()
             if not is_allowed_url(url):
                 self.send_json(400, {"error": "expected a YouTube URL"})
                 return
@@ -317,13 +335,14 @@ let
                     "url": url,
                     "artist": artist,
                     "title": title,
+                    "album": album,
                     "status": "queued",
                     "queued_at": time.time(),
                 }
 
             thread = threading.Thread(
                 target=run_job,
-                args=(job_id, url, artist, title),
+                args=(job_id, url, artist, title, album),
                 daemon=True,
             )
             thread.start()
