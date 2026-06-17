@@ -10,6 +10,7 @@
     # ./quickshell/quickshell.nix  # WIP custom shell, disabled in favor of noctalia
     ./noctalia.nix
     ./vscode.nix
+    ./fluxer.nix
   ];
 
   home.packages = with pkgs; [
