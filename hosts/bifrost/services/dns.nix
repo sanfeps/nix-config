@@ -144,6 +144,13 @@ in {
             answer = asgardIp;
             enabled = true;
           }
+          {
+            # Fluxer — self-hosted chat stack (podman-compose), fronted by
+            # asgard's own Caddy (vhost in hosts/asgard/services/fluxer/).
+            domain = "fluxer.${lanZone}";
+            answer = asgardIp;
+            enabled = true;
+          }
         ];
       };
     };
