@@ -11,5 +11,9 @@
     # seerr, recyclarr) and finally the NAS mount in ./media/storage.nix.
     # See ./media/vpn.nix for the bootstrap procedure.
     ./media
+
+    # Fluxer (self-hosted chat). Requires the `fluxer/*` sops secrets in
+    # hosts/asgard/secrets.yaml — see ./fluxer/CLAUDE.md for ops/bootstrap.
+    ./fluxer
   ];
 }

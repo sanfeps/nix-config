@@ -1,0 +1,48 @@
+{$FLUXER_CADDY_SITE_ADDRESS} {
+	encode zstd gzip
+
+	handle_path /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle /gateway {
+		rewrite * /
+		reverse_proxy gateway:8080
+	}
+
+	handle_path /gateway/* {
+		reverse_proxy gateway:8080
+	}
+
+	handle_path /media/* {
+		reverse_proxy media-proxy:8080
+	}
+
+	handle_path /livekit/* {
+		reverse_proxy livekit:7880
+	}
+
+	handle /admin {
+		rewrite * /
+		reverse_proxy admin:8080
+	}
+
+	handle_path /admin/* {
+		reverse_proxy admin:8080
+	}
+
+	@staticAssets path /fonts/* /web/* /emoji/* /libs/* /avatars/* /badges/* /desktop/* /embeds/*
+	handle @staticAssets {
+		reverse_proxy static-proxy:8080
+	}
+
+	handle {
+		reverse_proxy app-proxy:8080
+	}
+}
+
+:8088 {
+	handle_path /api/* {
+		reverse_proxy api:8080
+	}
+}
