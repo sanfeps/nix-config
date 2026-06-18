@@ -35,6 +35,7 @@
     #
     # ===== Optional Config =====
     #
+    ../optional/persist-ssh-hostkey.nix
     ../optional/greetd.nix
     ../optional/tailscale.nix
     ../optional/podman.nix

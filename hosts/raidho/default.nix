@@ -31,6 +31,7 @@
     #
     # ===== Optional Config =====
     #
+    ../optional/persist-ssh-hostkey.nix
     ../optional/greetd.nix
     ../optional/wireless.nix
     ../optional/tailscale.nix

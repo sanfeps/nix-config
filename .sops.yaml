@@ -3,9 +3,9 @@ keys:
     - &sanfe age1dzpr70ksa4nvcjrt3amwxzs0vu7mr7wwupz7c7n0rcym5s937upsk0tyly
   - &hosts
     - &asgard age1z2v0al9d5g97c25vqw5kdan7upvyuhm9v9xjqa5fp6xvtjt7xens4hxq7m
-    - &midgard age1nryru5p89jl6rg5vdtdfxmupslx5swxwsgvchh5pdma5gsfmws2sc09n0w
+    - &midgard age10krzdam0gl4a96k4sh40ew3mf4l75vyc2z2m454l49xap9pjhajqvmrjur
     - &bifrost age10qfc7fsd2ze6q29edssw55h5dpfhur8v7gqcrgy6lee4r8ylnassh0yg5v
-    - &raidho age1ku6mfx0z3cqs39erhnkrgze3fngu3sgf76w5w9827weqw2x6aups8p9et0
+    - &raidho age1t2cjnmj9tczrxn502q4wtp55unj5q9jxlwkunz9v3kduwczujc9sp7v8du
 creation_rules:
   - path_regex: hosts/common/secrets\.ya?ml$
     key_groups:
