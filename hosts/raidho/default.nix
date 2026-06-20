@@ -44,6 +44,13 @@
     useDHCP = true;
   };
 
+  # raidho is the roaming laptop: off-LAN it reaches the 192.168.1.0/24 LAN via
+  # bifrost's advertised subnet route, so it opts into accepting routes. (The
+  # stationary LAN hosts leave this at the module default of false — accepting
+  # their own LAN's route would blackhole their inbound LAN replies.) At home
+  # raidho's LAN traffic hairpins through bifrost's SNAT, which still works.
+  services.tailscaleClient.acceptRoutes = true;
+
   boot.loader = {
     systemd-boot.enable = true;
     efi.canTouchEfiVariables = true;
