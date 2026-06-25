@@ -14,6 +14,6 @@
 
     # Fluxer (self-hosted chat). Requires the `fluxer/*` sops secrets in
     # hosts/asgard/secrets.yaml — see ./fluxer/CLAUDE.md for ops/bootstrap.
-    ./fluxer
+    #./fluxer
   ];
 }
