@@ -26,13 +26,16 @@
   # auto-approves bifrost's exit-node routes (unchanged).
   #
   # group:guest is for shared-access users (e.g. a friend who gets Jellyfin +
-  # the music UI). Members reach ONLY asgard:8096 (Jellyfin) and asgard:5050
-  # (yt2jelly-ui, the YouTube→Jellyfin music adder) over the tailnet, plus the
-  # DNS server on bifrost:53 — the latter because override_local_dns pushes all
-  # of their DNS to 100.64.0.3, so blocking it would break their resolver.
-  # Everything else (other services, the LAN, the exit node) is denied by
-  # omission. Create the matching headscale user with `headscale users create
-  # guest`; add more "<user>@" entries here for more guests.
+  # the music UI + Fluxer chat). Members reach ONLY asgard:8096 (Jellyfin),
+  # asgard:5050 (yt2jelly-ui, the YouTube→Jellyfin music adder) and asgard:443
+  # (Fluxer chat) over the tailnet, plus the DNS server on bifrost:53 — the last
+  # because override_local_dns pushes all of their DNS to 100.64.0.3, so blocking
+  # it would break their resolver. NOTE asgard:443 is asgard's TAILNET-IP :443,
+  # which serves only Fluxer (asgard's other apps bind the LAN IP — see
+  # hosts/asgard/services/caddy.nix default_bind); guests can't reach them.
+  # Everything else (the LAN subnet, the exit node) is denied by omission. Create
+  # the matching headscale user with `headscale users create guest`; add more
+  # "<user>@" entries here for more guests.
   policyFile = pkgs.writeText "headscale-policy.hujson" ''
     {
       "groups": {
@@ -46,7 +49,7 @@
       },
       "acls": [
         {"action": "accept", "src": ["group:admin"], "dst": ["*:*"]},
-        {"action": "accept", "src": ["group:guest"], "dst": ["asgard:8096", "asgard:5050", "dns-server:53"]}
+        {"action": "accept", "src": ["group:guest"], "dst": ["asgard:8096", "asgard:5050", "asgard:443", "dns-server:53"]}
       ],
       "autoApprovers": {
         "exitNode": ["group:exit-approvers"],

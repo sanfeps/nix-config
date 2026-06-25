@@ -3,6 +3,31 @@
 Self-hosted **Fluxer** (https://fluxer.app, repo `fluxerapp/fluxer`) — an AGPLv3
 Discord alternative. **LAN + tailnet only**, at `https://fluxer.lan.valgrindr.net`.
 
+## Guest access over the tailnet (without exposing other asgard apps)
+
+Fluxer is shared with `group:guest` tailnet users, but asgard's `:443` is a single
+SNI-routed listener for *all* apps and tailnet ACLs are L3/L4 — so "guests get only
+Fluxer" can't be done by granting `asgard:443` to the shared listener. Instead we
+carve out a **Fluxer-only listener on asgard's tailnet IP**:
+
+- `services/caddy.nix` sets `default_bind 192.168.1.54` → every vhost binds the LAN
+  IP only by default. `+ ip_nonlocal_bind=1` so Caddy can bind the tailnet IP even
+  before tailscaled assigns it.
+- This module's Fluxer vhost adds `bind 192.168.1.54 100.64.0.2` → Fluxer is the
+  *only* site also listening on the tailnet IP `100.64.0.2:443`.
+- `fluxer.lan.valgrindr.net` is rewritten to `100.64.0.2` (AdGuard, bifrost
+  `dns.nix`) for everyone, so all clients hit the Fluxer-only socket at the
+  canonical name+port — the `*.lan` wildcard cert still matches and Fluxer's baked
+  `https://fluxer.lan.valgrindr.net:443` URLs stay valid. (Requires the client be
+  on the tailnet; all our devices are.)
+- headscale ACL grants `group:guest → asgard:443` (= `100.64.0.2:443`, Fluxer only).
+  Guests have no route/grant to `192.168.1.0/24`, so asgard's other apps (which bind
+  the LAN IP) are unreachable to them.
+
+Guests still need a Fluxer **account**: keep the instance invite-only (`/admin` →
+registration mode) and hand out admin invite URLs. Enroll their device as the
+headscale `guest` user (`headscale preauthkeys create --user guest --expiration 24h`).
+
 ## Why this is the one docker-compose in the repo
 
 Fluxer has **no native nixpkgs package/module** and ships only as a ~22-container

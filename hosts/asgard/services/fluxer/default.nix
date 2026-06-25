@@ -24,6 +24,14 @@
   ...
 }: let
   domain = "fluxer.lan.valgrindr.net";
+  # asgard's LAN + tailnet IPs. Fluxer is the one vhost that listens on the tailnet
+  # IP (asgard's Caddy default_bind is the LAN IP only — see services/caddy.nix), so
+  # guest tailnet users granted asgard:443 reach Fluxer and nothing else. The name
+  # fluxer.lan.valgrindr.net is rewritten to the tailnet IP for everyone (AdGuard,
+  # dns.nix on bifrost), so the wildcard cert still matches and Fluxer's baked
+  # https://fluxer.lan.valgrindr.net:443 URLs stay valid over the tailnet.
+  asgardLanIp = "192.168.1.54";
+  asgardTailnetIp = "100.64.0.2";
   stateDir = "/var/lib/fluxer";
 
   composeFile = ./docker-compose.yml;
@@ -134,6 +142,7 @@ in {
   # does all internal path routing (/api, /gateway WS, /media, /livekit, /admin,
   # static, catch-all → app-proxy), so a single reverse_proxy is enough.
   services.caddy.virtualHosts."${domain}".extraConfig = ''
+    bind ${asgardLanIp} ${asgardTailnetIp}
     reverse_proxy 127.0.0.1:8080
   '';
 

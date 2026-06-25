@@ -8,6 +8,10 @@
   # apps (immich, ghostfolio, home, firefly) → asgardIp (their own Caddy).
   bifrostIp = "192.168.1.55";
   asgardIp = "192.168.1.54";
+  # asgard's tailnet IP. Used only for Fluxer: its name resolves here so traffic
+  # lands on asgard's tailnet-only :443 listener (guest-scoped) instead of the
+  # shared LAN :443 that fronts every app. See hosts/asgard/services/fluxer/.
+  asgardTailnetIp = "100.64.0.2";
   lanZone = "lan.valgrindr.net";
   webPort = 3000;
   # bcrypt hash for the AdGuard webUI admin (same recipe as asgard).
@@ -146,9 +150,13 @@ in {
           }
           {
             # Fluxer — self-hosted chat stack (podman-compose), fronted by
-            # asgard's own Caddy (vhost in hosts/asgard/services/fluxer/).
+            # asgard's own Caddy. Answers asgard's TAILNET IP (not the LAN IP) so
+            # all clients land on the tailnet-only :443 listener that serves only
+            # Fluxer — this is what lets guest tailnet users reach Fluxer without
+            # exposing asgard's other apps. Requires the client be on the tailnet
+            # (all our devices are). See hosts/asgard/services/fluxer/.
             domain = "fluxer.${lanZone}";
-            answer = asgardIp;
+            answer = asgardTailnetIp;
             enabled = true;
           }
         ];
