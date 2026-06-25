@@ -93,11 +93,12 @@ let
       }
       # The nixpkgs *arr modules drop config.xml under XDG-style paths.
       # Sonarr keeps the legacy NzbDrone name for back-compat; Radarr uses
-      # its own. Prowlarr lives at the module's dataDir override.
+      # its own. Prowlarr uses the module default (DynamicUser StateDirectory
+      # at /var/lib/prowlarr → /var/lib/private/prowlarr); root reads it fine.
       CONFIGS = {
           "sonarr":   "/var/lib/sonarr/.config/NzbDrone/config.xml",
           "radarr":   "/var/lib/radarr/.config/Radarr/config.xml",
-          "prowlarr": "/srv/media/state/prowlarr/config.xml",
+          "prowlarr": "/var/lib/prowlarr/config.xml",
       }
       # Where the *arrs put their imports. Backed by tmpfiles dirs in
       # storage.nix while the NAS isn't provisioned; once the NFS mount

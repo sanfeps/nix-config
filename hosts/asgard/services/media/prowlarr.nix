@@ -2,24 +2,30 @@
 # Prowlarr — single source of truth for indexers. Confined to the Mullvad
 # netns alongside qBittorrent and the *arrs.
 #
-# Persistence dance: the upstream module uses `DynamicUser = true` +
-# `StateDirectory = "prowlarr"`, which normally drops state under
-# `/var/lib/private/prowlarr` — a path that doesn't play nicely with
-# `environment.persistence` (same trap as AdGuard, see root CLAUDE.md).
-# Workaround: override `dataDir` to a custom path. When `dataDir !=
-# /var/lib/prowlarr`, the module declares a `systemd.mounts` bind from
-# `dataDir` → `/var/lib/private/prowlarr` plus a tmpfiles rule to create
-# the source dir. We point it at `/srv/media/state/prowlarr` — `/srv` is
-# already in the global persistence list, so the data survives reboots
-# without an extra `environment.persistence.directories` entry.
+# Persistence: the upstream module hardcodes `DynamicUser = true` +
+# `StateDirectory = "prowlarr"`, so state lives at `/var/lib/private/prowlarr`
+# (ExecStart always runs `-data=/var/lib/prowlarr`, a symlink into it). asgard's
+# rootfs is NOT wiped on boot, so that path persists naturally — no
+# `environment.persistence` entry needed (same call as seerr.nix). The
+# DynamicUser `/var/lib/private` trap only bites on wipe-on-boot hosts
+# (midgard); revisit there.
+#
+# We deliberately DO NOT set `dataDir`. A custom `dataDir` makes the module
+# bind-mount it onto `/var/lib/private/prowlarr` AND drop a tmpfiles rule that
+# re-asserts `root:root 0700` on the bind source on every tmpfiles run — which
+# periodically strips the DynamicUser's own traverse permission and wedges the
+# service with `SQLite error (14): EACCES` on its data dir (contents get left
+# owned by the parked `nobody`/65534 uid; the web UI then 500s with a DryIoc
+# `ArrayTypeMismatchException`). Letting systemd own the StateDirectory outright
+# avoids that fight entirely.
 let
   port = 9696;
 in {
   services.prowlarr = {
     enable = true;
     openFirewall = false; # no LAN hole; local Caddy reaches it via the netns veth.
-    dataDir = "/srv/media/state/prowlarr";
-    # settings.server.port stays at the 9696 default.
+    # No dataDir override — see header comment. Data stays at the default
+    # /var/lib/private/prowlarr; settings.server.port stays at the 9696 default.
   };
 
   # Confine to the Mullvad netns. Prowlarr's outbound traffic (indexer
