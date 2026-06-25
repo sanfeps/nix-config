@@ -21,6 +21,8 @@
 #     though their host-side DNAT half is now unused.
 let
   nsIp = "192.168.15.1"; # vpnNamespaces.mullvad.namespaceAddress (default)
+  asgardLanIp = "192.168.1.54";
+  asgardTailnetIp = "100.64.0.2";
   vhost = name: target: {
     "${name}.lan.valgrindr.net".extraConfig = "reverse_proxy ${target}";
   };
@@ -28,7 +30,19 @@ in {
   services.caddy.virtualHosts =
     # Unconfined — host loopback.
     (vhost "jellyfin" "127.0.0.1:8096")
-    // (vhost "seerr" "127.0.0.1:5055")
+    # Seerr also binds asgard's TAILNET IP (100.64.0.2), not just the LAN IP that
+    # services/caddy.nix `default_bind` pins every other vhost to. That puts it on
+    # the same guest-reachable tailnet :443 listener as Fluxer, so group:guest
+    # users (granted asgard:443) can use the request manager. Its DNS name is
+    # rewritten to 100.64.0.2 for everyone (bifrost dns.nix) so all clients land
+    # here; the *.lan wildcard cert still matches. See services/fluxer/CLAUDE.md
+    # for the full rationale of the carve-out.
+    // {
+      "seerr.lan.valgrindr.net".extraConfig = ''
+        bind ${asgardLanIp} ${asgardTailnetIp}
+        reverse_proxy 127.0.0.1:5055
+      '';
+    }
     # Confined — Mullvad netns veth IP.
     // (vhost "qbittorrent" "${nsIp}:8080")
     // (vhost "prowlarr" "${nsIp}:9696")

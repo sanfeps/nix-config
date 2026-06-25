@@ -26,13 +26,14 @@
   # auto-approves bifrost's exit-node routes (unchanged).
   #
   # group:guest is for shared-access users (e.g. a friend who gets Jellyfin +
-  # the music UI + Fluxer chat). Members reach ONLY asgard:8096 (Jellyfin),
-  # asgard:5050 (yt2jelly-ui, the YouTube→Jellyfin music adder) and asgard:443
-  # (Fluxer chat) over the tailnet, plus the DNS server on bifrost:53 — the last
-  # because override_local_dns pushes all of their DNS to 100.64.0.3, so blocking
-  # it would break their resolver. NOTE asgard:443 is asgard's TAILNET-IP :443,
-  # which serves only Fluxer (asgard's other apps bind the LAN IP — see
-  # hosts/asgard/services/caddy.nix default_bind); guests can't reach them.
+  # the music UI + Fluxer chat + the Seerr request manager). Members reach ONLY
+  # asgard:8096 (Jellyfin), asgard:5050 (yt2jelly-ui, the YouTube→Jellyfin music
+  # adder) and asgard:443 over the tailnet, plus the DNS server on bifrost:53 —
+  # the last because override_local_dns pushes all of their DNS to 100.64.0.3, so
+  # blocking it would break their resolver. NOTE asgard:443 is asgard's
+  # TAILNET-IP :443, which serves only the vhosts that opt into binding it —
+  # currently Fluxer and Seerr (asgard's other apps bind the LAN IP only, see
+  # hosts/asgard/services/caddy.nix default_bind); guests can't reach those.
   # Everything else (the LAN subnet, the exit node) is denied by omission. Create
   # the matching headscale user with `headscale users create guest`; add more
   # "<user>@" entries here for more guests.

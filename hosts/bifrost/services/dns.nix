@@ -104,8 +104,14 @@ in {
             enabled = true;
           }
           {
+            # Seerr (request manager) answers asgard's TAILNET IP, not the LAN
+            # IP — like Fluxer. Its Caddy vhost binds 100.64.0.2:443 (a listener
+            # group:guest can reach via the asgard:443 grant), so guests can
+            # request media. All clients land on the tailnet listener; requires
+            # the client be on the tailnet (all our devices are). See
+            # hosts/asgard/services/media/caddy.nix.
             domain = "seerr.${lanZone}";
-            answer = asgardIp;
+            answer = asgardTailnetIp;
             enabled = true;
           }
           {
