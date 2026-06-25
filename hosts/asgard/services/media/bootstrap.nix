@@ -439,6 +439,7 @@ let
       import json
       import os
       import re
+      import subprocess
       import sys
       import time
       import urllib.error
@@ -449,6 +450,7 @@ let
       SEERR_PORT = 5055
       JELLYFIN_PORT = 8096
       JELLYFIN_EXTERNAL = "https://jellyfin.lan.valgrindr.net"
+      SYSTEMCTL = "${pkgs.systemd}/bin/systemctl"
 
       # Sonarr/Radarr config.xml — same paths as the netns-side reconciler,
       # repeated here so this script stands alone.
@@ -499,6 +501,57 @@ let
               raise ValueError("no main.apiKey in settings.json")
           initialized = bool(data.get("public", {}).get("initialized"))
           return api_key, initialized
+
+
+      def ensure_jellyfin_connection():
+          """Enforce Seerr's local Jellyfin connection.
+
+          Jellyfin runs on the host loopback at 127.0.0.1:8096 (Caddy fronts
+          the public name). Seerr's getHostname() builds its server URL from
+          {useSsl, ip, port, urlBase} on settings.jellyfin, so any drift there
+          breaks every login *before* credentials are checked: a missing ip
+          yields 'http://undefined:undefined', and a stale value (we've seen
+          port=80 + useSsl=null) points at a dead address. The wizard auto-run
+          is gated on initialized=false, so once the stack is initialized it
+          never corrects this on its own.
+
+          We pin the connection-critical keys to the loopback values and leave
+          name/serverId/apiKey/libraries intact. Seerr only reads settings.json
+          at startup, so we also bounce it to load the corrected values.
+          Returns True if it rewrote + restarted Seerr (caller must re-wait).
+          """
+          path = Path(SEERR_SETTINGS)
+          if not path.exists():
+              return False
+          data = json.loads(path.read_text())
+          jf = data.get("jellyfin", {})
+          desired = {
+              "ip":      HOST,
+              "port":    JELLYFIN_PORT,
+              "useSsl":  False,
+              "urlBase": "",
+          }
+          if all(jf.get(k) == v for k, v in desired.items()):
+              return False  # connection already correct — nothing to do
+          before = {k: jf.get(k) for k in desired}
+          jf.update(desired)
+          jf.setdefault("externalHostname", JELLYFIN_EXTERNAL)
+          data["jellyfin"] = jf
+          log(f"seerr: local Jellyfin connection drift {before} → {desired}; "
+              "rewriting settings.json + restarting Seerr")
+          st = path.stat()
+          # Stop Seerr first: its in-memory settings would otherwise clobber our
+          # write on the next save. It reloads settings.json from disk on start.
+          subprocess.run([SYSTEMCTL, "stop", "seerr.service"], check=False)
+          tmp = path.with_name(path.name + ".tmp")
+          tmp.write_text(json.dumps(data))
+          os.chown(tmp, st.st_uid, st.st_gid)  # keep DynamicUser ownership
+          os.chmod(tmp, st.st_mode & 0o777)
+          os.replace(tmp, path)
+          subprocess.run([SYSTEMCTL, "start", "seerr.service"], check=False)
+          log(f"seerr: connection repaired (ip={HOST} port={JELLYFIN_PORT}); "
+              "Seerr restarted")
+          return True
 
 
       def http(method, url, api_key=None, body=None, timeout=15):
@@ -675,8 +728,11 @@ let
           # `name` is read-only on Seerr's OpenAPI schema for this endpoint
           # — it's auto-derived from serverType. Sending it returns 400.
           settings_url = f"http://{HOST}:{SEERR_PORT}/api/v1/settings/jellyfin"
+          # NB: the settings endpoint keys the server address as `ip` (the UI
+          # submits `ip`, and getHostname reads `settings.jellyfin.ip`), unlike
+          # /api/v1/auth/jellyfin above which takes `hostname` and maps it to ip.
           settings_body = {
-              "hostname":          HOST,
+              "ip":                HOST,
               "port":              JELLYFIN_PORT,
               "useSsl":            False,
               "urlBase":           "",
@@ -712,6 +768,17 @@ let
           except Exception as e:
               log(f"seerr: could not extract API key — {e}")
               return
+
+          # Self-heal a stack that got marked initialized without a persisted
+          # Jellyfin connection (login otherwise dies on http://undefined:...).
+          if ensure_jellyfin_connection():
+              if not wait_seerr_ready(time.time() + READY_TIMEOUT):
+                  return
+              try:
+                  seerr_key, initialized = extract_seerr_state()
+              except Exception as e:
+                  log(f"seerr: post-repair state read failed — {e}")
+                  return
 
           if not initialized:
               log("seerr: wizard not yet completed — attempting auto-run from sops creds")
