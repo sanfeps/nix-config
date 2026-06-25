@@ -178,6 +178,8 @@ vpnNamespaces.mullvad.portMappings = [
 
 Mullvad's official conf includes `DNS = 10.64.0.1`. VPN-Confinement also routes NSCD socket lookups through the namespace, but only UDP DNS is well-tested. Keeping `DNS = 10.64.0.1` in the conf is belt-and-suspenders against accidental clear DNS resolution from inside the namespace. **Don't strip it during sops seeding.**
 
+**`single-request-reopen` (intermittent `EAI_AGAIN`).** With a *single* tunnel-routed resolver in a dual-stack netns, glibc fires the A and AAAA queries in parallel from one socket; over the WireGuard tunnel one reply intermittently gets dropped, so `getaddrinfo` returns `EAI_AGAIN` and every confined .NET app surfaces it as `SocketException (11): Resource temporarily unavailable (<host>:443)` — Prowlarr indexer tests fail, Radarr's SkyHook metadata lookups 503, and a Seerr request that hits the 503 gets marked **FAILED** (the request itself is fine — re-request and it goes through). `vpn.nix` appends `options single-request-reopen` to `/etc/netns/mullvad/resolv.conf` via an `ExecStartPost` on `mullvad.service` (re-applied every (re)start because `mullvad-up` does `rm -rf /etc/netns/mullvad` first), forcing the two lookups to run sequentially on separate sockets. We can't add a fallback nameserver — the netns firewall drops UDP/53 to anything but the configured resolver. If flakiness persists, the next lever is a small caching forwarder (dnsmasq/unbound) bound on the netns loopback, or `timeout:`/`attempts:` resolver options.
+
 ## Adding a new service to this stack
 
 1. Drop a file in this folder, listing it in `default.nix`.

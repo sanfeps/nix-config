@@ -1,6 +1,8 @@
 {
   config,
   inputs,
+  lib,
+  pkgs,
   ...
 }:
 # Mullvad WireGuard network namespace for the media acquisition plane.
@@ -62,4 +64,22 @@ in {
     # portMappings is a list — each service module appends its own entry.
     # Defaults for namespaceAddress (192.168.15.1) are left untouched.
   };
+
+  # Harden DNS resolution inside the namespace. VPN-Confinement writes
+  # /etc/netns/${ns}/resolv.conf with just the single Mullvad resolver
+  # (10.64.0.1) and its firewall drops UDP/53 to anything else (leak belt), so
+  # we can't add a fallback nameserver. In a dual-stack netns glibc fires the A
+  # and AAAA queries in parallel on one socket; over the tunnel one reply
+  # intermittently gets dropped, so getaddrinfo returns EAI_AGAIN and every
+  # confined .NET app surfaces it as `SocketException (11): Resource temporarily
+  # unavailable (<host>:443)` — Prowlarr indexer tests fail, Radarr's SkyHook
+  # metadata lookups 503, and Seerr marks the resulting request FAILED.
+  # `single-request-reopen` makes glibc issue the two lookups sequentially on
+  # separate sockets, which removes the dropped-reply race. mullvad-up does
+  # `rm -rf /etc/netns/${ns}` on every (re)start, so re-append on ExecStartPost.
+  systemd.services.${ns}.serviceConfig.ExecStartPost = lib.mkAfter [
+    (pkgs.writeShellScript "${ns}-resolv-single-request" ''
+      printf 'options single-request-reopen\n' >> /etc/netns/${ns}/resolv.conf
+    '')
+  ];
 }
