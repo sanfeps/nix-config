@@ -37,6 +37,11 @@
     ./services
   ];
 
+  # Subnet router: advertise the home LAN so off-LAN tailnet members can reach
+  # *.lan.valgrindr.net (the AdGuard rewrites answer LAN IPs, otherwise unroutable
+  # over the tailnet). Approved in headscale's autoApprovers.routes (services/headscale.nix).
+  services.tailscaleExitNode.advertiseRoutes = ["192.168.1.0/24"];
+
   networking = {
     hostName = "bifrost";
     # Static-at-OS until the router supports DHCP reservations.

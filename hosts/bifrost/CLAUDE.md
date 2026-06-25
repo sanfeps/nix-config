@@ -21,12 +21,14 @@ Wired in `services/default.nix`:
 - **`homepage.nix`** — `services.homepage-dashboard` at `https://homepage.lan.valgrindr.net`. Single landing page that lists every service in the cluster regardless of which host runs it. Whole config (groups, tiles, widgets, bookmarks) is declared in Nix and rendered to YAML by the module — when a new service is added to the flake, add a tile here in the same commit. Listens `127.0.0.1:8082`; Caddy fronts it via the wildcard vhost (handle declared inside `homepage.nix` itself, not in `caddy.nix`).
 - **`headplane.nix`** — Headscale admin UI (community project, no NixOS package). Runs as a Podman `oci-container` (custom module at `modules/nixos/services/containers/headplane.nix`) bound to `127.0.0.1:3001` via `--network=host` so it can hit headscale on `127.0.0.1:8080`. Mounts `/etc/headscale/config.yaml` read-only so it can surface ACLs/OIDC settings. Headplane 0.6+ ignores env vars for server/headscale config, so bifrost renders `/run/headplane/config.yaml` in a oneshot before `podman-headplane.service` starts. The current `headplane-cookie-secret` in sops is a 64-char hex string, but Headplane 0.6.3 validates `server.cookie_secret` at exactly 32 chars, so the renderer trims it to 32 on write instead of forcing a secret rotation. `cookie_secure: false` because TLS terminates at Caddy and the loopback hop is plain HTTP. No `integration` block, so the UI is view-only for ACL reloads — after editing ACLs, `systemctl reload headscale` manually. Upstream serves the app under `/admin`, so the homepage tile links there directly and Caddy redirects bare `/` on `headplane.lan.valgrindr.net` to `/admin`.
 
-## Exit node
+## Exit node + subnet router
 
-Bifrost advertises as the yggdrasil exit-node via `hosts/optional/tailscale-exit-node.nix`:
+Bifrost advertises as the yggdrasil exit-node **and** the home-LAN subnet router via `hosts/optional/tailscale-exit-node.nix`:
 - `services.tailscale.useRoutingFeatures = lib.mkForce "server"` enables IPv4/IPv6 forwarding sysctls.
-- `tailscale-advertise-exit-node.service` (oneshot, `wantedBy = multi-user.target`) runs `tailscale set --advertise-exit-node=true` after `tailscaled` is up, so the flag is re-applied declaratively on every boot/deploy.
-- Auto-approval is policy-driven from `headscale.nix`; no manual `approve-routes` needed.
+- `tailscale-advertise-exit-node.service` (oneshot, `wantedBy = multi-user.target`) runs `tailscale set --advertise-exit-node=true --advertise-routes=192.168.1.0/24` after `tailscaled` is up, re-applied declaratively on every boot/deploy. The subnet comes from `services.tailscaleExitNode.advertiseRoutes = ["192.168.1.0/24"]` set in `default.nix` (both flags go in **one** `set` call so they don't clobber each other).
+- **Why the subnet route:** AdGuard's `*.lan.valgrindr.net` rewrites answer LAN IPs (`192.168.1.x`). Off-LAN tailnet members resolve those fine (DNS server is bifrost's tailnet IP `100.64.0.3`) but couldn't *route* to them without this — so they had to hit raw tailnet-IP:port. With the route advertised + approved, `*.lan` names work transparently off-LAN.
+- Auto-approval is policy-driven from `headscale.nix` (`autoApprovers.routes` now lists `192.168.1.0/24` → `group:exit-approvers`, alongside `exitNode`); no manual `approve-routes` needed.
+- **Clients must accept routes**: `hosts/optional/tailscale.nix` now enrolls with `--accept-routes=true`. Already-enrolled persistent nodes need a one-time `tailscale set --accept-routes=true`; impermanence nodes (midgard/raidho) pick it up on their next re-enroll. The ACL still gates *which* nodes may reach the subnet (`group:guest` has no LAN dst, so guests stay scoped).
 
 Client opt-in is per-client and intentional. Outside on a hostile network:
 ```bash

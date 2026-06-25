@@ -280,6 +280,7 @@ The tailnet is self-hosted via headscale on bifrost. Key facts:
 - IPv4 prefix: `100.64.0.0/10` (midgard `100.64.0.1`, asgard `100.64.0.2`, bifrost `100.64.0.3` — fresh DB after the Phase 3 cutover, assignment is by enrollment order)
 - DNS pushed to tailnet members: `192.168.1.55` (AdGuard on bifrost) — set in `services.headscale.settings.dns.nameservers.global`. Hosts that import `hosts/optional/tailscale.nix` come up with `--accept-dns=true`.
 - Exit-node: bifrost (`hosts/optional/tailscale-exit-node.nix`). Auto-approved by the inline HuJSON policy (`autoApprovers.exitNode` for `group:exit-approvers`). Opt-in per client: `tailscale set --exit-node=bifrost`.
+- Subnet router: bifrost also advertises `192.168.1.0/24` (`services.tailscaleExitNode.advertiseRoutes`, same `tailscale set` call as the exit-node flag), auto-approved via `autoApprovers.routes`. This makes the LAN-IP answers from AdGuard's `*.lan.valgrindr.net` rewrites routable off-LAN — without it, remote tailnet members resolve the names but can't reach the `192.168.1.x` targets. Clients enroll with `--accept-routes=true`; the ACL still gates which nodes may use the route (guests are not granted the LAN).
 - Declarative bootstrap: `systemd.services.headscale-bootstrap` on bifrost seeds the SQLite DB with the `yggdrasil` user and a reusable preauth key (prefix + hash live in sops).
 
 **Enrolling a new host**:
