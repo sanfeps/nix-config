@@ -112,8 +112,20 @@ already in sops.
   defining them — see the LOCAL PATCH header in that file. **Re-apply when
   re-vendoring from upstream.** If a future upstream adds more nested defaults,
   either flatten them or switch the unit to the `podman compose` provider.
-- **Tailnet voice**: LiveKit uses `use_external_ip: true` + Google STUN and will
-  advertise asgard's LAN IP — fine on LAN. If calls fail for tailnet-only clients,
-  add a TURN server or a LiveKit external-IP override in `livekit.yaml`.
+- **Voice needs `FLUXER_LIVEKIT_URL`**: upstream's self-hosting compose OMITS it, so
+  the backend never learns the client-facing LiveKit endpoint — voice rooms can't be
+  allocated and joining a voice channel silently fails (the `VoiceReconciliationWorker`
+  logs `liveKitServersSearched: 0`, and *nothing* reaches the livekit container — not a
+  network/mic problem). `docker-compose.yml` adds `FLUXER_LIVEKIT_URL: wss://${FLUXER_DOMAIN}/livekit`
+  (LOCAL PATCH) — the browser-facing WS URL the bundled Caddy proxies (`/livekit/*` →
+  `livekit:7880`). This is separate from `node_ip` below (URL = signaling, node_ip = media).
+- **Voice (LiveKit) IP**: LiveKit runs in the podman bridge namespace, so it can't
+  see asgard's `tailscale0` and STUN only finds the WAN IP — neither reachable by
+  clients. `livekit.yaml` pins `use_external_ip: false` + `node_ip: 100.64.0.2`
+  (asgard's tailnet IP) so it advertises a routable media candidate; media UDP 7882
+  / TCP 7881 are published on the host's `0.0.0.0`, so packets to `100.64.0.2:7882`
+  over the mesh reach the container. Works for any tailnet client. **Guest voice**
+  additionally needs `asgard:7881` + `asgard:7882` in the `group:guest` ACL
+  (`hosts/bifrost/services/headscale.nix`) — admins already have `*:*`.
 - Like any new service it needs the **AdGuard rewrite** in
   `hosts/bifrost/services/dns.nix` (`fluxer` → asgard) — already added.

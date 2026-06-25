@@ -4,10 +4,15 @@ log_level: info
 rtc:
   tcp_port: 7881
   udp_port: 7882
-  use_external_ip: true
-  stun_servers:
-    - stun.l.google.com:19302
-    - stun1.l.google.com:19302
+  # LOCAL PATCH (nix-config): LiveKit runs in the podman bridge namespace and can't
+  # see asgard's tailscale0 interface, and STUN (use_external_ip) only finds the WAN
+  # IP — neither is reachable by clients. Pin the advertised media IP to asgard's
+  # TAILNET IP so every client (all on the tailnet, reaching Fluxer via 100.64.0.2)
+  # gets a routable candidate. Media UDP 7882 / TCP 7881 are published on the host's
+  # 0.0.0.0, so packets to 100.64.0.2:7882 over the mesh reach the container.
+  # Re-apply when re-vendoring livekit.yaml.
+  use_external_ip: false
+  node_ip: 100.64.0.2
 
 webhook:
   api_key: fluxer

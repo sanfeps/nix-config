@@ -56,6 +56,12 @@ x-fluxer-env: &fluxer-env
   FLUXER_LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY in .env}
   FLUXER_LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET in .env}
   FLUXER_LIVEKIT_WEBHOOK_URL: http://api:8080/webhooks/livekit
+  # LOCAL PATCH (nix-config): upstream's self-hosting compose OMITS FLUXER_LIVEKIT_URL,
+  # so the backend never learns the client-facing LiveKit endpoint — voice rooms can't
+  # be allocated and joining a voice channel silently fails (liveKitServersSearched: 0,
+  # nothing reaches the livekit container). This is the browser-facing WebSocket URL,
+  # proxied by the bundled Caddy (/livekit/* -> livekit:7880). Re-apply when re-vendoring.
+  FLUXER_LIVEKIT_URL: wss://${FLUXER_DOMAIN}/livekit
 
   FLUXER_EMAIL_ENABLED: ${FLUXER_EMAIL_ENABLED:-false}
   FLUXER_EMAIL_PROVIDER: ${FLUXER_EMAIL_PROVIDER:-none}
