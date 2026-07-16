@@ -24,8 +24,12 @@ phases, UGOS rollback procedure).
   with keys loaded.
 - Kernel: **default NixOS kernel only** (ZFS compatibility; no xanmod).
 - Fans: ITE IT8613E needs the out-of-tree it87 fork (`fan-control.nix` +
-  `it87.nix`, `force_id=0x8613` + `acpi_enforce_resources=lax`). Driver loads;
-  a fancontrol curve is TODO pending on-box `pwmconfig` calibration.
+  `it87.nix`, `force_id=0x8613` + `acpi_enforce_resources=lax`). Calibrated
+  2026-07-16: pwm2→fan2 (CPU fan), pwm3→fan3 (case fan), pwm4/5 unused. The
+  `fan-curve` systemd service drives them (CPU temp → pwm2, hottest drivetemp
+  → pwm3); it deliberately avoids `hardware.fancontrol` because drivetemp
+  hwmon paths shuffle with SATA enumeration. On service stop the chip falls
+  back to its own auto mode.
 - BIOS: hardware watchdog must stay **disabled** or non-UGOS OSes get rebooted.
   If the box starts rebooting spontaneously, check that setting first.
 
