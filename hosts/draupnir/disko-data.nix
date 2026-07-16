@@ -43,7 +43,25 @@
         acltype = "posixacl";
         normalization = "formD";
         mountpoint = "none";
+        # Native ZFS encryption on the pool root, inherited by all datasets.
+        # Threat model: drives that leave the box (RMA, disposal, single-bay
+        # theft) — NOT whole-box theft; the key lives in plaintext on the OS
+        # NVMe so the pool auto-unlocks at boot (zfs-import-tank loads file://
+        # keys; /persist is neededForBoot). Backups of the key: sops
+        # (hosts/draupnir/secrets.yaml, tank-encryption-key) and midgard
+        # ~/backups/draupnir-install/persist/tank.key. Losing every copy of
+        # the key means losing the pool.
+        encryption = "aes-256-gcm";
+        keyformat = "hex";
+        # Creation-time location: nixos-anywhere --disk-encryption-keys drops
+        # the key here in the installer before the disko phase runs.
+        keylocation = "file:///tmp/tank.key";
       };
+      # The runtime key is shipped to /persist/tank.key via --extra-files;
+      # point the pool there for every import after the install.
+      postCreateHook = ''
+        zfs set keylocation="file:///persist/tank.key" tank
+      '';
       datasets = {
         # Jellyfin library (served to asgard over NFS).
         media = {

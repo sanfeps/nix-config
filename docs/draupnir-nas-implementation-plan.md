@@ -133,7 +133,8 @@ Path already prepared in the previous session: UGOS has root SSH enabled
 
 ```bash
 nixos-anywhere --phases kexec,disko,install,reboot \
-  --extra-files <dir with /etc/ssh/ssh_host_ed25519_key> \
+  --extra-files ~/backups/draupnir-install \
+  --disk-encryption-keys /tmp/tank.key ~/backups/draupnir-install/persist/tank.key \
   --flake .#draupnir --target-host root@192.168.1.39
 ```
 
@@ -142,6 +143,15 @@ nixos-anywhere detects that and skips the kexec phase (harmless to list it);
 if it was power-cycled back to UGOS, the kexec path re-runs from there. The
 host key in the `--extra-files` dir must be mode 0600 (permissions are
 preserved into the installed system).
+
+Encryption: `tank` uses native ZFS encryption (aes-256-gcm, hex keyfile).
+`--disk-encryption-keys` places the key at `/tmp/tank.key` in the installer so
+`zpool create` can consume it; `--extra-files` ships the same key to
+`/persist/tank.key` in the installed system, where the pool's `keylocation`
+points (reset by disko's `postCreateHook`). The key is backed up in sops
+(`hosts/draupnir/secrets.yaml`, `tank-encryption-key`) and on midgard at
+`~/backups/draupnir-install/persist/tank.key` — if every copy is lost, the
+pool is gone.
 
 Post-boot: confirm tailscale enrollment (`100.64.0.4` expected by order),
 `zpool status` clean, scrub timer armed, fans behaving.

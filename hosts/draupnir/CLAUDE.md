@@ -14,6 +14,14 @@ phases, UGOS rollback procedure).
   declared in `disko-data.nix`. Datasets: `tank/media`, `tank/immich`,
   `tank/backups` → mounted at `/tank/*` (legacy mountpoints via fileSystems).
   `networking.hostId` is load-bearing for pool import — never change it.
+- Encryption: native ZFS (aes-256-gcm) on the pool root, inherited by all
+  datasets. Key is a plaintext hex file at `/persist/tank.key` (auto-unlock at
+  boot; threat model is drives leaving the box, not whole-box theft). Key
+  backups: sops `hosts/draupnir/secrets.yaml` (`tank-encryption-key`) and
+  midgard `~/backups/draupnir-install/persist/tank.key`. **Never lose all
+  copies — the pool is unrecoverable without the key.** A replacement NVMe
+  needs the key restored to `/persist/tank.key` before `tank` will import
+  with keys loaded.
 - Kernel: **default NixOS kernel only** (ZFS compatibility; no xanmod).
 - Fans: ITE IT8613E needs the out-of-tree it87 fork (`fan-control.nix` +
   `it87.nix`, `force_id=0x8613` + `acpi_enforce_resources=lax`). Driver loads;
