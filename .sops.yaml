@@ -6,6 +6,7 @@ keys:
     - &midgard age10krzdam0gl4a96k4sh40ew3mf4l75vyc2z2m454l49xap9pjhajqvmrjur
     - &bifrost age10qfc7fsd2ze6q29edssw55h5dpfhur8v7gqcrgy6lee4r8ylnassh0yg5v
     - &raidho age1t2cjnmj9tczrxn502q4wtp55unj5q9jxlwkunz9v3kduwczujc9sp7v8du
+    - &draupnir age1fdsftvaxgpgpyxs8k6nkm5c2540njwk63nw7rlcwspr49mlnl96qj23p7l
 creation_rules:
   - path_regex: hosts/common/secrets\.ya?ml$
     key_groups:
@@ -15,6 +16,7 @@ creation_rules:
           - *midgard
           - *bifrost
           - *raidho
+          - *draupnir
   - path_regex: hosts/asgard/secrets\.ya?ml$
     key_groups:
       - age:
@@ -25,3 +27,8 @@ creation_rules:
       - age:
           - *sanfe
           - *bifrost
+  - path_regex: hosts/draupnir/secrets\.ya?ml$
+    key_groups:
+      - age:
+          - *sanfe
+          - *draupnir

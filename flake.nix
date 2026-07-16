@@ -129,6 +129,14 @@
         };
       };
 
+      # NAS (UGREEN DXP4800 Plus, bare metal) — see hosts/draupnir/CLAUDE.md
+      draupnir = lib.nixosSystem {
+        modules = [./hosts/draupnir];
+        specialArgs = {
+          inherit inputs outputs;
+        };
+      };
+
       # # Build and game server (Oracle)
       # nidavellir = lib.nixosSystem {
       #   modules = [./hosts/nidavellir];
