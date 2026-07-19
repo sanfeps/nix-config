@@ -6,5 +6,6 @@
     ./headplane.nix
     ./ddns.nix
     ./homepage.nix
+    ./ntfy.nix
   ];
 }

@@ -92,6 +92,13 @@ in {
             enabled = true;
           }
           {
+            # ntfy — push-notification bus (ZED alerts from draupnir, and any
+            # future publisher). Served by bifrost's own Caddy.
+            domain = "ntfy.${lanZone}";
+            answer = bifrostIp;
+            enabled = true;
+          }
+          {
             domain = "headplane.${lanZone}";
             answer = bifrostIp;
             enabled = true;

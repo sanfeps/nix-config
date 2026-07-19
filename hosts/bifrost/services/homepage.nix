@@ -46,6 +46,13 @@ in {
               icon = "headscale.png";
             };
           }
+          {
+            "ntfy" = {
+              href = "https://ntfy.lan.valgrindr.net";
+              description = "Push notifications (ZFS alerts & friends)";
+              icon = "ntfy.png";
+            };
+          }
         ];
       }
       {
