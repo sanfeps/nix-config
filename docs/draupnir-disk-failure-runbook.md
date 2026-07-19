@@ -14,11 +14,18 @@ recovery.
   `FAULTED`, `REMOVED`, or `UNAVAIL`, and the pool as `DEGRADED`.
 - `zfs-zed` runs by default and journals every event in real time
   (`journalctl -u zfs-zed`: `statechange`, `vdev_attach`,
-  `resilver_start/finish` — all confirmed during the drill). **But it only
-  journals: no email/push channel is wired (Phase 5 TODO).** Until then,
-  nothing *notifies* — check `zpool status` after any scrub, and treat the
-  alert wiring as the top Phase 5 item. A silently degraded raidz1 is the
-  main operational risk of this box.
+  `resilver_start/finish` — all confirmed during the drill).
+- **Push alerts are wired and validated (2026-07-19)**: ZED publishes every
+  notify-worthy event (state changes, errors, scrub/resilver finish) to the
+  self-hosted ntfy on bifrost, topic `zfs-draupnir`
+  (`https://ntfy.lan.valgrindr.net`, login `sanfe`). Config lives in
+  `hosts/draupnir/default.nix` (ZFS section); server in
+  `hosts/bifrost/services/ntfy.nix`. `ZED_NOTIFY_VERBOSE=1`, so the
+  **monthly `scrub_finish` push doubles as a heartbeat** — if a month passes
+  without a scrub notification, the alerting pipeline itself is broken: check
+  `systemctl status ntfy-sh` on bifrost, `journalctl -u zfs-zed` on draupnir,
+  and `curl https://ntfy.lan.valgrindr.net/v1/health`. Repeated events are
+  rate-limited to one per hour (`ZED_NOTIFY_INTERVAL_SECS=3600`).
 
 A degraded pool keeps serving all data (reconstructed from parity), with
 reduced read performance. Services stay up. Do not panic; do replace promptly.
@@ -148,9 +155,10 @@ Results — all green:
 - `keystatus` stayed `available` through every phase — encryption is
   invisible to the whole failure/replace path, as expected.
 - `zfs-zed` journaled every transition in real time (eid `statechange
-  OFFLINE` → `vdev_attach` → `resilver_start` → `resilver_finish`) — but no
-  notification went anywhere (journal only), confirming the Phase 5 alerting
-  gap.
+  OFFLINE` → `vdev_attach` → `resilver_start` → `resilver_finish`) — at drill
+  time no notification went anywhere (journal only); the ZED→ntfy push
+  channel closing that gap landed and was validated 2026-07-19 (see
+  Detection).
 - One deviation from the naive procedure, now folded into Scenario A: the
   pool knows its members by `wwn-*` names; `zpool offline` with the `ata-*`
   alias fails with "no such device in pool".
