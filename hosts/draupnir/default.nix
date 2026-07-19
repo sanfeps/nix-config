@@ -1,6 +1,8 @@
 {
+  config,
   inputs,
   lib,
+  pkgs,
   ...
 }: {
   imports = [
@@ -71,6 +73,25 @@
     interval = "monthly";
     pools = ["tank"];
   };
+
+  # ZED → ntfy push alerts (degraded pool, errors, scrub/resilver) via the
+  # self-hosted ntfy on bifrost. VERBOSE makes scrub_finish notify too — the
+  # monthly scrub push doubles as a heartbeat proving the pipeline works.
+  #
+  # The token must not land in the world-readable store, so the setting is a
+  # command substitution: zed.rc values are rendered unescaped and *sourced* by
+  # zedlets as root at event time, resolving $(cat …) against the sops-
+  # materialized file at runtime.
+  sops.secrets."zed-ntfy-token" = {};
+  services.zfs.zed.settings = {
+    ZED_NTFY_URL = "https://ntfy.lan.valgrindr.net";
+    ZED_NTFY_TOPIC = "zfs-draupnir";
+    ZED_NTFY_ACCESS_TOKEN = "$(cat ${config.sops.secrets."zed-ntfy-token".path})";
+    ZED_NOTIFY_INTERVAL_SECS = 3600;
+    ZED_NOTIFY_VERBOSE = true;
+  };
+  # The ntfy zedlet shells out to curl; make sure it's on the unit's PATH.
+  systemd.services.zfs-zed.path = [pkgs.curl];
 
   boot.loader = {
     systemd-boot.enable = true;

@@ -32,6 +32,14 @@ phases, UGOS rollback procedure).
   back to its own auto mode.
 - BIOS: hardware watchdog must stay **disabled** or non-UGOS OSes get rebooted.
   If the box starts rebooting spontaneously, check that setting first.
+- Alerting: ZED pushes pool events (degraded/faulted, errors, scrub/resilver)
+  to the self-hosted ntfy on bifrost, topic `zfs-draupnir` (config inline in
+  `default.nix`, ZFS section). `ZED_NOTIFY_VERBOSE=1` so the monthly
+  `scrub_finish` push doubles as a pipeline heartbeat — if scrub notifications
+  stop arriving, the alerting itself is broken. The publish token is read at
+  event time via `$(cat /run/secrets/zed-ntfy-token)` (sops); zed.rc renders
+  settings unescaped and zedlets source it as root, so nothing lands in the
+  store. Same token value lives in bifrost's `ntfy/auth-env`.
 
 ## Roles (planned, see plan doc Phases 3–5)
 
