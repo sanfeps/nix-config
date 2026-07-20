@@ -58,11 +58,14 @@
     };
 
     machineLearning = {
-      # Smart search embeddings. Default model (ViT-B-32__openai) is
-      # English-centric: to search in Spanish, switch to a multilingual
-      # model, e.g. clip.modelName = "nllb-clip-base-siglip__v1" (~1 GiB
-      # heavier, re-run the Smart Search job after changing).
-      clip.enabled = true;
+      # Smart search embeddings. Multilingual model instead of the default
+      # ViT-B-32__openai (English-centric) so queries work in Spanish.
+      # ~1 GiB heavier; if the model ever changes again, re-run the Smart
+      # Search job (Admin → Jobs) to re-embed the existing library.
+      clip = {
+        enabled = true;
+        modelName = "nllb-clip-base-siglip__v1";
+      };
       facialRecognition.enabled = true;
       duplicateDetection.enabled = true;
     };
