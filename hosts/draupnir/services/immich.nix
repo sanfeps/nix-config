@@ -28,4 +28,57 @@
   systemd.services.immich-server.unitConfig.RequiresMountsFor = [
     config.homelab.services.immich.mediaLocation
   ];
+
+  # Declarative system settings (rendered to IMMICH_CONFIG_FILE). With this
+  # set, the admin System Settings UI is read-only and every change goes
+  # through Nix; keys not listed keep Immich's defaults. Schema:
+  # https://immich.app/docs/install/config-file/
+  # Note: machineLearning.urls is deliberately NOT set — its default comes
+  # from the IMMICH_MACHINE_LEARNING_URL env the NixOS module wires to the
+  # local ML service.
+  services.immich.settings = {
+    server.externalDomain = "https://immich.lan.valgrindr.net";
+    # nixpkgs owns the version; don't phone github from the server.
+    newVersionCheck.enabled = false;
+
+    # Immich's own nightly pg dumps, written to <mediaLocation>/backups —
+    # i.e. onto the raidz1 pool, covered by future tank/immich snapshots.
+    backup.database = {
+      enabled = true;
+      cronExpression = "0 02 * * *";
+      keepLastAmount = 14;
+    };
+
+    # Human-readable on-disk layout for new uploads instead of UUID paths.
+    # Decided pre-first-upload on purpose: changing it later means running
+    # the storage-migration job over the whole library.
+    storageTemplate = {
+      enabled = true;
+      template = "{{y}}/{{MM}}/{{filename}}";
+    };
+
+    machineLearning = {
+      # Smart search embeddings. Default model (ViT-B-32__openai) is
+      # English-centric: to search in Spanish, switch to a multilingual
+      # model, e.g. clip.modelName = "nllb-clip-base-siglip__v1" (~1 GiB
+      # heavier, re-run the Smart Search job after changing).
+      clip.enabled = true;
+      facialRecognition.enabled = true;
+      duplicateDetection.enabled = true;
+    };
+
+    # Keep ML/thumbnail jobs from ganging up on the 8 GiB box (ARC already
+    # holds 3 GiB); throughput on bulk imports is the acceptable trade.
+    job = {
+      smartSearch.concurrency = 1;
+      faceDetection.concurrency = 1;
+      thumbnailGeneration.concurrency = 2;
+      videoConversion.concurrency = 1;
+    };
+
+    trash = {
+      enabled = true;
+      days = 30;
+    };
+  };
 }

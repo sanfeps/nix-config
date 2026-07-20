@@ -54,7 +54,13 @@ Wired in `services/default.nix`:
   `docs/immich-draupnir-migration-runbook.md`); the library lives directly on
   the dataset at `/tank/immich`. Binds `127.0.0.1:2283`, fronted by the local
   Caddy at `https://immich.lan.valgrindr.net`; AdGuard on bifrost answers
-  `192.168.1.56` for that name.
+  `192.168.1.56` for that name. **System settings are declarative**
+  (`services.immich.settings` → IMMICH_CONFIG_FILE): the admin System
+  Settings UI is read-only, changes go through Nix. Declared: nightly DB
+  dumps to `<mediaLocation>/backups`, storage template (`{{y}}/{{MM}}`),
+  ML toggles, per-queue job concurrency caps (8 GiB box), trash 30d.
+  Don't set `machineLearning.urls` — its default comes from the env var the
+  NixOS module wires to the local ML service.
 
 RAM note: 8 GiB total, shared with the ZFS ARC — capped at 3 GiB via
 `zfs.zfs_arc_max` in `default.nix`. If Immich ML jobs still cause memory
