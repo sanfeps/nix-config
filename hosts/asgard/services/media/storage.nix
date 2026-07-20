@@ -12,7 +12,7 @@
 #
 #   - NAS (/mnt/nas/media/library): final library, read by Jellyfin and
 #     written by Sonarr/Radarr at import time. Mount stays commented until
-#     the NAS lands — same staging pattern as hosts/asgard/services/immich.nix.
+#     the NFS export lands (draupnir, plan doc Phase 3).
 #
 # A shared `media` group spans the *arrs, qbittorrent, and jellyfin so they
 # can traverse each other's paths without one impersonating the other. Each

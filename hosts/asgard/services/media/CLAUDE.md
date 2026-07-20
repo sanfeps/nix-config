@@ -2,7 +2,7 @@
 
 Declarative media stack on asgard. Everything is native NixOS — no docker-compose, no Gluetun container. The acquisition plane (qbittorrent + the indexer/automation *arrs) runs inside a Mullvad WireGuard network namespace via [VPN-Confinement](https://github.com/Maroka-chan/VPN-Confinement); the playback / request plane (Jellyfin, Seerr) and the TRaSH sync (Recyclarr) sit outside the namespace on the host's normal network.
 
-Scaffold mode is the rule: the `./media` import in `hosts/asgard/services/default.nix` stays **commented** until the manual bootstrap below is done. Same pattern as `services/immich.nix`. The module files themselves can land in `main` independently.
+Scaffold mode is the rule: the `./media` import in `hosts/asgard/services/default.nix` stays **commented** until the manual bootstrap below is done. The module files themselves can land in `main` independently.
 
 ## Topology at a glance
 
