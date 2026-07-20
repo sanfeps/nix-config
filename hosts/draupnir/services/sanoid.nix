@@ -21,7 +21,11 @@
 {
   services.sanoid = {
     enable = true; # 15-min systemd timer; sanoid decides what's due
-    datasets."tank/immich" = {
+
+    # Shared retention policy for anything hand-curated/irreplaceable.
+    # Rolling windows = recovery granularity: any hour of the last day,
+    # any day of the last month, any month of the last year.
+    templates.irreplaceable = {
       autosnap = true;
       autoprune = true;
       hourly = 24;
@@ -29,5 +33,9 @@
       monthly = 12;
       yearly = 0; # the monthlies + offsite (later) cover long-term
     };
+
+    # New irreplaceable dataset later (docs, etc.)? `zfs create` it, add it
+    # to disko-data.nix, then one line here.
+    datasets."tank/immich".useTemplate = ["irreplaceable"];
   };
 }
