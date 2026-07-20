@@ -14,6 +14,7 @@
   ];
 
   home.packages = with pkgs; [
+    krita
     librewolf
     remmina
     vesktop
@@ -33,6 +34,11 @@
         ".config/remmina"
         ".local/share/remmina"
         ".config/vesktop"
+        ".local/share/krita"
+      ];
+      files = [
+        ".config/kritarc"
+        ".config/kritadisplayrc"
       ];
     };
   };

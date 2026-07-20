@@ -61,6 +61,7 @@
           "Downloads"
           "Pictures"
           "Videos"
+          "backups" # disk images & recovery artifacts (e.g. draupnir UGOS image)
           ".local/bin"
           ".local/share/nix" # trusted settings and repl history
 
@@ -81,6 +82,9 @@
           # OpenCode
           ".config/opencode"
           ".local/share/opencode"
+
+          # ComfyUI (models, custom nodes, outputs)
+          ".config/comfy-ui"
 
           # Shell and editor state
           ".vim"
