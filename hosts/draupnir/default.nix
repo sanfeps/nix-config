@@ -59,11 +59,14 @@
       }
     ];
     defaultGateway = "192.168.1.1";
-    # AdGuard on bifrost first (resolves *.lan.valgrindr.net), Quad9 fallback.
-    nameservers = [
-      "192.168.1.55"
-      "9.9.9.9"
-    ];
+    # AdGuard on bifrost ONLY — no public fallback, on purpose. systemd-
+    # resolved treats listed servers as coequal (not ordered) and was observed
+    # preferring 9.9.9.9, which NXDOMAINs every *.lan.valgrindr.net name
+    # (silently breaking the ZED→ntfy pushes) and Njalla's NS domains
+    # (breaking Caddy's DNS-01 propagation check — Quad9 blocklists them).
+    # If bifrost is down, everything this host needs names for (ntfy, LE via
+    # AdGuard's njalla routing) is down with it anyway.
+    nameservers = ["192.168.1.55"];
   };
 
   #
