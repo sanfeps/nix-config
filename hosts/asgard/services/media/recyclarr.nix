@@ -34,11 +34,12 @@ let
   sonarrKey = "${credsDir}/sonarr-api-key";
   radarrKey = "${credsDir}/radarr-api-key";
 
-  # config.xml lives at <stateDir>/config.xml for both *arrs. Default
-  # StateDirectory is /var/lib/{sonarr,radarr}; the `ApiKey` element is
-  # plain text inside the XML so a one-shot xmllint extract is enough.
-  sonarrConfig = "/var/lib/sonarr/config.xml";
-  radarrConfig = "/var/lib/radarr/config.xml";
+  # The nixpkgs *arr modules drop config.xml under XDG-style paths inside
+  # their state dirs (Sonarr keeps the legacy NzbDrone name for back-compat) —
+  # same paths the bootstrap.nix reconciler uses. The `ApiKey` element is
+  # plain text inside the XML so a one-shot sed extract is enough.
+  sonarrConfig = "/var/lib/sonarr/.config/NzbDrone/config.xml";
+  radarrConfig = "/var/lib/radarr/.config/Radarr/config.xml";
 in {
   services.recyclarr = {
     enable = true;
