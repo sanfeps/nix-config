@@ -66,13 +66,21 @@ RAM note: 8 GiB total, shared with the ZFS ARC — capped at 3 GiB via
 `zfs.zfs_arc_max` in `default.nix`. If Immich ML jobs still cause memory
 pressure, `homelab.services.immich.machineLearning = false` is the next lever.
 
+- **`sanoid.nix`** — automatic ZFS snapshots of `tank/immich` only (24
+  hourly / 30 daily / 12 monthly; media and backups deliberately excluded —
+  rationale in the file header). Recover files from
+  `/tank/immich/.zfs/snapshot/<name>/`. Local protection only; offsite
+  replication is still pending.
+
 ## Roles (planned, see plan doc Phases 3–5)
 
 - NFSv4 exports of `/tank/{media,backups}` to asgard only (gid contract:
   `media` gid 1500 pinned on both hosts). `tank/immich` no longer needs
   exporting — Immich runs locally on this host.
-- Restic offsite target for the finance stack.
-- Sanoid snapshots on `tank/immich`; monthly `services.zfs.autoScrub`; smartd.
+- Restic offsite target for the finance stack; offsite replication of
+  `tank/immich` (photos currently die with the box — decision on target
+  pending: cloud restic vs remote ZFS receive).
+- Monthly `services.zfs.autoScrub` (active); smartd (pending).
 
 ## Install / recovery
 
