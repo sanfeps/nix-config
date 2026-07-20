@@ -5,9 +5,11 @@
 }: let
   # bifrost owns LAN DNS. Each rewrite points a *.lan.valgrindr.net name at the
   # host that terminates TLS for it: bifrost-local services → bifrostIp, asgard
-  # apps (immich, ghostfolio, home, firefly) → asgardIp (their own Caddy).
+  # apps (ghostfolio, home, firefly, media) → asgardIp, draupnir apps (immich)
+  # → draupnirIp (each host runs its own Caddy).
   bifrostIp = "192.168.1.55";
   asgardIp = "192.168.1.54";
+  draupnirIp = "192.168.1.56";
   # asgard's tailnet IP. Used only for Fluxer: its name resolves here so traffic
   # lands on asgard's tailnet-only :443 listener (guest-scoped) instead of the
   # shared LAN :443 that fronts every app. See hosts/asgard/services/fluxer/.
@@ -152,9 +154,10 @@ in {
             enabled = true;
           }
           {
-            # per-host-caddy Phase 1: immich is fronted by asgard's own Caddy.
+            # Immich runs on draupnir (fronted by draupnir's own Caddy) since
+            # the 2026-07 cutover — see docs/immich-draupnir-migration-runbook.md.
             domain = "immich.${lanZone}";
-            answer = asgardIp;
+            answer = draupnirIp;
             enabled = true;
           }
           {

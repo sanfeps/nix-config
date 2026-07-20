@@ -20,7 +20,6 @@ All live under `services/` and are wired in `services/default.nix`:
   - **Backups**: `pg_dump` custom format daily, persisted at `/persist/var/backups/postgres/`, validated end-to-end (restorable).
 - **`home-automation/`** — Home Assistant + Mosquitto.
   - Home Assistant is enabled via the reusable `homelab.services.homeAssistant` module (`modules/homelab/services/home-assistant/`); the host file only sets `name = "Asgard"`, the `url`, and the co-located mqtt broker via `extraConfig`. Binds `127.0.0.1:8123`, fronted by asgard's local Caddy at `https://home.lan.valgrindr.net` (per-host-caddy Phase 2b). AdGuard rewrites the name directly to `192.168.1.54`; bifrost is not in the request path. `trusted_proxies` is `127.0.0.1`/`::1` only — Caddy is local so no cross-host hop to trust. Mosquitto stays a separate host file.
-- **`immich.nix`** — self-hosted photo/video library at `https://immich.lan.valgrindr.net`. Enabled via the reusable `homelab.services.immich` module (`modules/homelab/services/immich/`, the canary for the reusable-modules plan); the host file only sets `enable`/`url`/`mediaLocation` and owns the pre-NAS storage backing. Binds `127.0.0.1:2283`, fronted by asgard's local Caddy (per-host-Caddy Phase 1). AdGuard rewrites `immich.lan.valgrindr.net` → `192.168.1.54` directly; bifrost is not in the request path. Photo library lives at `/mnt/nas/immich`, which is **pre-NAS** backed by a local tmpfiles dir (see header of the file); once the NAS lands, uncomment the fileSystems block and drop the tmpfiles entries — the same path gets overlaid by NFS with no service-side change. Service state (DB rows, thumbnails, encoded video, ML models) lives under `/var/lib/immich` (persisted), photo originals under the mediaLocation. Machine-learning is on by default — CPU-heavy, revisit if asgard struggles.
 - **`media/`** — see `services/media/CLAUDE.md` for the full media stack (Jellyfin, Seerr, Sonarr/Radarr/Prowlarr in a Mullvad netns, qBittorrent, Recyclarr).
 - **`fluxer/`** — self-hosted **Fluxer** (Discord alternative) at `https://fluxer.lan.valgrindr.net`. The **only docker-compose in the repo**: a ~22-container stack vendored verbatim and run via `podman-compose` under a declarative systemd unit (no native nixpkgs option exists). Fluxer's bundled Caddy is loopback-only HTTP (`127.0.0.1:8080`) and asgard's own Caddy fronts it; LiveKit voice binds 7881/tcp + 7882/udp (LAN/tailnet). Import in `services/default.nix` stays **commented** until the `fluxer/*` sops secrets are seeded — see `services/fluxer/CLAUDE.md` for the one-time bootstrap, the compose patch, and ops/backup notes.
 
@@ -36,7 +35,7 @@ Asgard runs its own Caddy via the shared `services.caddyNjalla` module (`modules
 
 Per-host-Caddy migration status (`docs/per-host-caddy-migration-plan.md`):
 
-- **Immich** — fronted by local Caddy (Phase 1 ✓).
+- **Immich** — was Phase 1 here; moved to draupnir 2026-07 (fresh install, the asgard instance was empty scaffold — `docs/immich-draupnir-migration-runbook.md`). Leftover state on asgard (`/mnt/nas/immich`, `/var/lib/immich`, the `immich` Postgres DB) can be cleaned whenever.
 - **Ghostfolio** — fronted by local Caddy (Phase 2a ✓).
 - **Home Assistant** — fronted by local Caddy (Phase 2b ✓).
 - **Firefly III** — fronted by local Caddy (Phase 3 ✓). Caddy terminates TLS and proxies straight to the PHP-FPM Unix socket.
@@ -57,5 +56,5 @@ NIX_SSHOPTS="-i ~/.ssh/lykill" nixos-rebuild switch --flake .#asgard \
 
 ## Recovery cheats
 
-- **Caddy 502 on a vhost (from outside)**: every asgard app (Immich, Ghostfolio, Home Assistant, Firefly) now terminates TLS on asgard — check `systemctl status caddy` + `journalctl -u caddy -n 100` here. Only bifrost-local names (adguard, homepage, headplane, headscale) terminate on bifrost.
+- **Caddy 502 on a vhost (from outside)**: every asgard app (Ghostfolio, Home Assistant, Firefly, the media stack) terminates TLS on asgard — check `systemctl status caddy` + `journalctl -u caddy -n 100` here. Only bifrost-local names (adguard, homepage, headplane, headscale) terminate on bifrost.
 - **`*.lan.valgrindr.net` not resolving from the LAN**: AdGuard on bifrost (`192.168.1.55`) owns LAN DNS. Check `nc -vz 192.168.1.55 53` from the client. The rewrite answer determines which host the request lands on — `192.168.1.54` for asgard apps, `192.168.1.55` for bifrost-local services.

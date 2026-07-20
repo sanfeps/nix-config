@@ -173,7 +173,7 @@ homelab.services.immich = {
 };
 ```
 
-These are **thin wrappers**: expose the few knobs a host varies, wire the rest (the upstream `services.<thing>.*`, the local-Caddy vhost, persistence) inside the module, and let users drop into `services.<thing>.*` directly for anything not surfaced. Host-specific quirks (e.g. asgard's pre-NAS tmpfiles backing for Immich) stay in the host file. Immich is the canary; see `modules/homelab/CLAUDE.md` for the authoring pattern and `docs/services-reusable-modules-plan.md` for the rollout plan and recorded design decisions.
+These are **thin wrappers**: expose the few knobs a host varies, wire the rest (the upstream `services.<thing>.*`, the local-Caddy vhost, persistence) inside the module, and let users drop into `services.<thing>.*` directly for anything not surfaced. Host-specific quirks (e.g. the storage backing for Immich's `mediaLocation`) stay in the host file. Immich is the canary; see `modules/homelab/CLAUDE.md` for the authoring pattern and `docs/services-reusable-modules-plan.md` for the rollout plan and recorded design decisions.
 
 #### Container Services
 Declarative Podman container services are managed through custom NixOS modules located in `modules/nixos/services/containers/`. Each service module defines options and configuration for running containers via `virtualisation.oci-containers`.
@@ -296,7 +296,7 @@ AdGuard Home on bifrost owns LAN DNS and is the authoritative resolver for `lan.
 - Bound to `0.0.0.0:53` (DoH to Quad9 upstream).
 - WebUI on `127.0.0.1:3000`, reverse-proxied by Caddy at `https://adguard.lan.valgrindr.net` (TLS via the LE wildcard `*.lan.valgrindr.net`).
 - Module: `hosts/bifrost/services/dns.nix`. Settings use `mutableSettings = false` so changes only happen through Nix.
-- Rewrites point each `*.lan.valgrindr.net` name at the host that terminates TLS for it: bifrost-local names (`adguard`, `homepage`, `headplane`) → bifrost (`192.168.1.55`); every asgard app (Immich, Ghostfolio, Home Assistant, Firefly, the media stack) → asgard (`192.168.1.54`), which runs its own Caddy. bifrost no longer proxies asgard services.
+- Rewrites point each `*.lan.valgrindr.net` name at the host that terminates TLS for it: bifrost-local names (`adguard`, `homepage`, `headplane`, `ntfy`) → bifrost (`192.168.1.55`); asgard apps (Ghostfolio, Home Assistant, Firefly, the media stack) → asgard (`192.168.1.54`); draupnir apps (Immich) → draupnir (`192.168.1.56`). Each app host runs its own Caddy; bifrost no longer proxies any of them.
 - Workstations on the LAN reach AdGuard either directly (router DHCP advertises it — TODO) or via Magic DNS through tailscale.
 
 **Gotchas worth memorizing**:
@@ -323,7 +323,7 @@ Ingress is per-host: the host that runs the service also terminates TLS for it. 
    ```
 3. Secrets: `sops.secrets.…` (see "Working with Secrets" above).
 4. Persistence: `environment.persistence."${config.hostSpec.persistFolder}".directories`.
-5. DNS rewrite on bifrost: add to `services.adguardhome.settings.filtering.rewrites` in `hosts/bifrost/services/dns.nix` with `answer = "<host's LAN IP>"` and `enabled = true;` (use the `bifrostIp`/`asgardIp` constants).
+5. DNS rewrite on bifrost: add to `services.adguardhome.settings.filtering.rewrites` in `hosts/bifrost/services/dns.nix` with `answer = "<host's LAN IP>"` and `enabled = true;` (use the `bifrostIp`/`asgardIp`/`draupnirIp` constants).
 6. Deploy the app host. Bifrost only needs a deploy if the rewrite list changed.
 
 No firewall holes for backend ports, no cross-host Caddy handles, no `trusted_proxies` plumbing — Caddy and the backend share `127.0.0.1`.
@@ -336,7 +336,8 @@ No firewall holes for backend ports, no cross-host Caddy handles, no `trusted_pr
 
 - **midgard**: Main desktop (x86_64-linux, AMD CPU, xanmod kernel, Steam enabled). NixOS-integrated home-manager. Tailnet `100.64.0.1`.
 - **asgard**: App server (Proxmox VM on the home LAN, x86_64-linux). Owns the finance stack (Firefly III, Ghostfolio, shared Postgres) and home-automation (Home Assistant, Mosquitto). Reachable at `192.168.1.54` on LAN and `100.64.0.2` on tailnet.
-- **bifrost**: Networking host (Proxmox VM on the home LAN, x86_64-linux). Owns AdGuard (LAN DNS), headscale (tailnet control plane), Njalla DDNS for `headscale.valgrindr.net`, Caddy edge with LE wildcard cert for `*.lan.valgrindr.net` (Njalla DNS-01), and the tailnet exit-node role. Reachable at `192.168.1.55` on LAN and `100.64.0.3` on tailnet.
+- **bifrost**: Networking host (Proxmox VM on the home LAN, x86_64-linux). Owns AdGuard (LAN DNS), headscale (tailnet control plane), Njalla DDNS for `headscale.valgrindr.net`, Caddy edge with LE wildcard cert for `*.lan.valgrindr.net` (Njalla DNS-01), ntfy (push bus), and the tailnet exit-node role. Reachable at `192.168.1.55` on LAN and `100.64.0.3` on tailnet.
+- **draupnir**: NAS (bare-metal UGREEN DXP4800 Plus, x86_64-linux). Owns the raidz1 `tank` pool (encrypted ZFS) and runs storage-adjacent apps with its own Caddy — currently Immich (library on `tank/immich`). Reachable at `192.168.1.56` on LAN and `100.64.0.13` on tailnet. See `hosts/draupnir/CLAUDE.md`.
 
 ## Important Notes
 

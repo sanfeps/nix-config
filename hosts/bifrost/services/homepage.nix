@@ -79,19 +79,23 @@ in {
             };
           }
           {
-            "Immich" = {
-              href = "https://immich.lan.valgrindr.net";
-              description = "Photo / video library";
-              icon = "immich.png";
-            };
-          }
-          {
             "Fluxer" = {
               href = "https://fluxer.lan.valgrindr.net";
               description = "Self-hosted chat (Discord alt.)";
               # dashboard-icons has no Fluxer glyph yet; use the instance's own
               # logo (served by its web client). Fetched browser-side, LAN-only.
               icon = "https://fluxer.lan.valgrindr.net/web/apple-touch-icon.png";
+            };
+          }
+        ];
+      }
+      {
+        "NAS (draupnir)" = [
+          {
+            "Immich" = {
+              href = "https://immich.lan.valgrindr.net";
+              description = "Photo / video library";
+              icon = "immich.png";
             };
           }
         ];
