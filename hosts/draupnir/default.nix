@@ -35,6 +35,11 @@
     # ===== Optional Config =====
     #
     ../optional/tailscale.nix
+
+    #
+    # ===== Services =====
+    #
+    ./services
   ];
 
   networking = {
@@ -68,6 +73,11 @@
   # (no xanmod here). Pool layout lives in ./disko-data.nix.
   boot.supportedFilesystems = ["zfs"];
   boot.zfs.forceImportRoot = false;
+  # Cap the ARC at 3 GiB: the box has 8 GiB total and now runs app services
+  # too (Immich server + ML + Postgres + Redis). The ZFS default (50% of RAM)
+  # plus those working sets leaves the kernel thrashing under ML jobs. ARC
+  # gives memory back under pressure, but slowly — a hard cap is calmer.
+  boot.kernelParams = ["zfs.zfs_arc_max=3221225472"];
   services.zfs.autoScrub = {
     enable = true;
     interval = "monthly";

@@ -41,10 +41,30 @@ phases, UGOS rollback procedure).
   settings unescaped and zedlets source it as root, so nothing lands in the
   store. Same token value lives in bifrost's `ntfy/auth-env`.
 
+## Services
+
+Wired in `services/default.nix`:
+
+- **`caddy.nix`** — draupnir's own Caddy via the shared `services.caddyNjalla`
+  module (wildcard LE cert for `*.lan.valgrindr.net`, Njalla DNS-01, same
+  per-host-ingress pattern as asgard/bifrost). `default_bind 192.168.1.56`
+  pins every vhost to the LAN IP.
+- **`immich.nix`** — Immich via the reusable `homelab.services.immich` module.
+  Fresh install (the asgard instance was empty scaffold — cutover runbook:
+  `docs/immich-draupnir-migration-runbook.md`); the library lives directly on
+  the dataset at `/tank/immich`. Binds `127.0.0.1:2283`, fronted by the local
+  Caddy at `https://immich.lan.valgrindr.net`; AdGuard on bifrost answers
+  `192.168.1.56` for that name.
+
+RAM note: 8 GiB total, shared with the ZFS ARC — capped at 3 GiB via
+`zfs.zfs_arc_max` in `default.nix`. If Immich ML jobs still cause memory
+pressure, `homelab.services.immich.machineLearning = false` is the next lever.
+
 ## Roles (planned, see plan doc Phases 3–5)
 
-- NFSv4 exports of `/tank/{media,immich,backups}` to asgard only (gid contract:
-  `media` gid 1500 pinned on both hosts).
+- NFSv4 exports of `/tank/{media,backups}` to asgard only (gid contract:
+  `media` gid 1500 pinned on both hosts). `tank/immich` no longer needs
+  exporting — Immich runs locally on this host.
 - Restic offsite target for the finance stack.
 - Sanoid snapshots on `tank/immich`; monthly `services.zfs.autoScrub`; smartd.
 
