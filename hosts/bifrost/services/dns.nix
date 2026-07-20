@@ -43,7 +43,17 @@ in {
       dns = {
         bind_hosts = ["0.0.0.0"];
         port = 53;
-        upstream_dns = ["https://dns.quad9.net/dns-query"];
+        upstream_dns = [
+          "https://dns.quad9.net/dns-query"
+          # Quad9 blocklists Njalla's nameserver domains — NXDOMAIN for
+          # 1-you.njalla.no / 2-can.njalla.in / 3-get.njalla.fo (observed
+          # 2026-07-20; njal.la itself resolves fine). That breaks Caddy's
+          # DNS-01 issuance fleet-wide: certmagic's propagation check must
+          # resolve valgrindr.net's authoritative NS names to query them.
+          # Route only those zones to resolvers that answer honestly.
+          "[/njalla.no/njalla.in/njalla.fo/]1.1.1.1"
+          "[/njalla.no/njalla.in/njalla.fo/]8.8.8.8"
+        ];
         bootstrap_dns = [
           "9.9.9.9"
           "149.112.112.112"
