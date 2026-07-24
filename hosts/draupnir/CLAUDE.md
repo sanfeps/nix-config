@@ -66,20 +66,56 @@ RAM note: 8 GiB total, shared with the ZFS ARC — capped at 3 GiB via
 `zfs.zfs_arc_max` in `default.nix`. If Immich ML jobs still cause memory
 pressure, `homelab.services.immich.machineLearning = false` is the next lever.
 
-- **`sanoid.nix`** — automatic ZFS snapshots of `tank/immich` only (24
-  hourly / 30 daily / 12 monthly; media and backups deliberately excluded —
-  rationale in the file header). Recover files from
-  `/tank/immich/.zfs/snapshot/<name>/`. Local protection only; offsite
-  replication is still pending.
+- **`sanoid.nix`** — automatic ZFS snapshots of `tank/immich` only (24h / 30d /
+  12m / **3y** via the `irreplaceable` template; the 3 yearlies exist so the
+  offsite copy can *receive* them — offsite plan §4). `tank/media` and
+  `tank/backups` are deliberately NOT snapshotted (rationale in the file
+  header). Recover files from `/tank/immich/.zfs/snapshot/<name>/`.
+- **`syncoid-source.nix`** — makes draupnir a **send-only** replication source
+  for the offsite box (niflheim). A dedicated `syncoid` user has
+  `send,snapshot,bookmark,mount` delegated on `tank/{immich,backups}` (no
+  `destroy`/`receive`/`hold`); niflheim *pulls*. **INERT** until niflheim's
+  pubkey is added to `openssh.authorizedKeys.keys`. Design:
+  `docs/immich-offsite-backup-plan.md`.
+
+### Adding a new dataset to the offsite replica
+
+Offsite replication (to niflheim) is **additive but multi-file — and has a
+non-obvious prerequisite**. To replicate a new `tank/<name>` (e.g. `tank/repos`):
+
+1. **Snapshot the source** — `hosts/draupnir/services/sanoid.nix`. syncoid pulls
+   with `--no-sync-snap`, so it can only send snapshots that **already exist**. A
+   dataset with no sanoid policy has *nothing to send* and its leg silently does
+   nothing. Give it a template (`irreplaceable` for photo-like data; a lighter
+   one for churny repos).
+2. **Delegate** — add `"tank/<name>"` to the `datasets` list in
+   `hosts/draupnir/services/syncoid-source.nix`.
+3. **niflheim pull** — add `{ src = "tank/<name>"; dst = "cold/<name>"; }` to
+   `hosts/niflheim/services/syncoid.nix`.
+4. **niflheim prune** — add `datasets."cold/<name>".useTemplate = ["offsite"];`
+   to `hosts/niflheim/services/sanoid.nix`, or the copy grows unbounded.
+
+Each is a one-liner; other datasets' legs are untouched. **Removing** a dataset
+is the only sticky bit: `zfs allow` persists in the pool, so drop it from the
+list *and* `zfs unallow syncoid … tank/<name>` by hand.
+
+> **Known gap — `tank/backups` is not yet snapshotted**, so as currently wired
+> its offsite leg (step 1) would send nothing. It's a *future* leg (niflheim
+> isn't built), not a live failure. Before the finance restic repo goes offsite,
+> give `tank/backups` a light sanoid policy — this keeps `--no-sync-snap` and the
+> no-`destroy` delegation; dropping `--no-sync-snap` instead would force granting
+> `destroy`, which the security model rejects.
 
 ## Roles (planned, see plan doc Phases 3–5)
 
 - NFSv4 exports of `/tank/{media,backups}` to asgard only (gid contract:
   `media` gid 1500 pinned on both hosts). `tank/immich` no longer needs
   exporting — Immich runs locally on this host.
-- Restic offsite target for the finance stack; offsite replication of
-  `tank/immich` (photos currently die with the box — decision on target
-  pending: cloud restic vs remote ZFS receive).
+- Restic offsite target for the finance stack. Offsite replication of
+  `tank/immich` is **decided and in progress**: syncoid raw-send (pull) to a
+  dedicated intermittent ZFS box, niflheim, over the tailnet. Source side
+  (`syncoid-source.nix`) is deployed; niflheim host is scaffolded but awaits
+  hardware. See `docs/immich-offsite-backup-plan.md` + `hosts/niflheim/CLAUDE.md`.
 - Monthly `services.zfs.autoScrub` (active); smartd (pending).
 
 ## Install / recovery

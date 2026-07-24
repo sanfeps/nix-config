@@ -277,6 +277,12 @@ that's the trade, not a bug.
 - **niflheim → ntfy reachability** over tailscale — verify the AdGuard rewrite
   + bifrost subnet route resolve `ntfy.lan.valgrindr.net` from a remote node
   (should, given `--accept-routes`; confirm).
+- **`tank/backups` has no snapshots to send.** syncoid `--no-sync-snap` can only
+  ship existing snapshots, but sanoid snapshots `tank/immich` only — so the
+  backups leg (§1 table) is inert as designed. Fix before that leg goes live:
+  give `tank/backups` a *light* sanoid policy (keeps `--no-sync-snap` + the
+  no-`destroy` delegation). See `hosts/draupnir/CLAUDE.md` → "Adding a new
+  dataset to the offsite replica".
 - **Second offsite later?** One remote box is copy #3; a cloud restic tier
   (B2/Storj) could be added as copy #4 without touching this. Deferred.
 - **niflheim uptime is by design** — the box is off most of the month (§3), so
