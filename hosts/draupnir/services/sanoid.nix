@@ -31,7 +31,11 @@
       hourly = 24;
       daily = 30;
       monthly = 12;
-      yearly = 0; # the monthlies + offsite (later) cover long-term
+      # Yearlies are created here so the offsite copy (niflheim) can *receive*
+      # them — its prune can only keep snapshot types the source makes, it
+      # can't mint a yearly from a monthly. draupnir keeps a modest 3; niflheim
+      # holds 10 (deep archive). See docs/immich-offsite-backup-plan.md §4.
+      yearly = 3;
     };
 
     # New irreplaceable dataset later (docs, etc.)? `zfs create` it, add it
