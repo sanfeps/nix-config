@@ -137,6 +137,18 @@
         };
       };
 
+      # Offsite backup box (intermittent, ~monthly connect) — see
+      # hosts/niflheim/CLAUDE.md and docs/immich-offsite-backup-plan.md.
+      # SCAFFOLD: uncomment once the hardware exists and the TODO(hw)/TODO(sops)
+      # bits are filled (real by-id paths, hostId, hardware-configuration.nix,
+      # &niflheim sops recipient + secrets.yaml).
+      # niflheim = lib.nixosSystem {
+      #   modules = [./hosts/niflheim];
+      #   specialArgs = {
+      #     inherit inputs outputs;
+      #   };
+      # };
+
       # # Build and game server (Oracle)
       # nidavellir = lib.nixosSystem {
       #   modules = [./hosts/nidavellir];
