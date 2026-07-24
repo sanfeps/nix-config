@@ -9,7 +9,7 @@ scaffold/TODO state.
 
 An **intermittently-connected** low-power mini-PC at a **second physical
 location**. It is powered on **~once a month**, pulls a **raw** (`zfs send -w`,
-end-to-end encrypted) replica of `tank/{immich,backups}` from draupnir into a
+end-to-end encrypted) replica of `tank/immich` from draupnir into a
 local single-disk pool `cold`, prunes to a deep retention, ntfy's the result,
 and **powers itself back off**. It never holds `tank`'s encryption key, so the
 copy is ciphertext at rest and unreadable on the box itself.

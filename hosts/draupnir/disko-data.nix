@@ -82,15 +82,9 @@
             recordsize = "1M";
           };
         };
-        # Restic offsite target for the finance stack (and future repos).
-        backups = {
-          type = "zfs_fs";
-          mountpoint = "/tank/backups";
-          options = {
-            mountpoint = "legacy";
-            recordsize = "1M";
-          };
-        };
+        # NOTE: a `tank/backups` dataset (finance restic offsite target) was
+        # removed 2026-07-24 for simplicity — nothing wrote to it yet. Re-add it
+        # here (plus its offsite legs) when the finance offsite plan is built.
       };
     };
   };

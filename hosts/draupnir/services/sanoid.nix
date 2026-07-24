@@ -7,8 +7,8 @@
 #   - tank/media: re-downloadable by the *arrs and high-churn (imports
 #     replace files constantly) — snapshots would pin deleted releases for
 #     months with no recovery value.
-#   - tank/backups: future restic target; restic versions itself, and
-#     snapshotting a pruning repo mostly retains garbage.
+# (A tank/backups finance-restic dataset was removed 2026-07-24 — re-add its
+#  snapshot policy alongside the dataset when the finance offsite is built.)
 #
 # tank/immich is append-mostly (photos rarely change), so retention is
 # cheap: the space cost is roughly "what you deleted, kept a while longer".

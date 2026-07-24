@@ -108,8 +108,9 @@ NVMe.
 raidz1 does not survive this. The pool is gone; recovery is restore-from-
 backup. Current backup coverage:
 
-- `tank/backups` (asgard finance restic target): originals live on asgard —
-  nothing lost, re-point and re-seed.
+- Finances: pg_dumps live on asgard (`/persist/var/backups/postgres/`, 90d) —
+  nothing lost here. (The `tank/backups` restic offsite target was removed
+  2026-07-24, still unbuilt; finance offsite is deferred.)
 - `tank/media`: re-acquirable by the *arr stack — annoying, not a disaster.
 - `tank/immich`: **the irreplaceable one. As of 2026-07-16 there is no
   offsite copy — until an offsite replication/backup for tank/immich exists,

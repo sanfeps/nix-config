@@ -48,9 +48,9 @@
         normalization = "formD";
         mountpoint = "none";
       };
-      # No child datasets declared on purpose: `cold/immich` and `cold/backups`
-      # are created by the first `zfs receive` (syncoid). Pre-creating them
-      # would collide with the raw-received encryption roots.
+      # No child datasets declared on purpose: `cold/immich` is created by the
+      # first `zfs receive` (syncoid). Pre-creating it would collide with the
+      # raw-received encryption root.
     };
   };
 }

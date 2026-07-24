@@ -27,6 +27,5 @@
     };
 
     datasets."cold/immich".useTemplate = ["offsite"];
-    datasets."cold/backups".useTemplate = ["offsite"];
   };
 }

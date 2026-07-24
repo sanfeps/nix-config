@@ -1,4 +1,4 @@
-# Offsite backup plan — `tank/immich` (and `tank/backups`)
+# Offsite backup plan — `tank/immich`
 
 Status: **plan, not yet implemented.** Pairs with
 `docs/immich-draupnir-migration-runbook.md` (the move that made draupnir the
@@ -27,8 +27,8 @@ This is the third leg of 3-2-1:
 | Dataset | Offsite? | Rationale |
 |---|---|---|
 | `tank/immich` | **Yes** | Irreplaceable. Photos + the nightly Immich pg_dump that lives *inside* the dataset (`<mediaLocation>/backups`) → every snapshot is a self-contained restore point. |
-| `tank/backups` | **Yes** | Small; finance restic repo + dumps. Cheap insurance. |
 | `tank/media` | **No** | Re-downloadable by the *arrs, high-churn. Not worth offsite bytes. |
+| `tank/backups` | **Deferred** | Finance restic target — removed 2026-07-24 (empty, unbuilt). Revisit with the finance offsite plan; it'll need its own snapshot policy to replicate. |
 
 ## 2. Why syncoid raw-send (not restic)
 
@@ -99,9 +99,8 @@ a nightly timer** — there's no point scheduling a 02:00 run on a box that's of
 ### Mechanics
 
 - On draupnir: a **dedicated unprivileged user** (e.g. `syncoid`) with ZFS
-  **`send,snapshot,bookmark,mount`** delegated on `tank/immich` and
-  `tank/backups` (`zfs allow`), and an authorized SSH key. **No `destroy`, no
-  `receive`, no `hold`.**
+  **`send,snapshot,bookmark,mount`** delegated on `tank/immich` (`zfs allow`),
+  and an authorized SSH key. **No `destroy`, no `receive`, no `hold`.**
   The incremental base is preserved as a **bookmark**, not a hold — this is the
   deliberate choice for an intermittent target. A hold pins the base snapshot
   *and its data blocks* on draupnir for the entire absence, so a forgotten
@@ -120,11 +119,10 @@ a nightly timer** — there's no point scheduling a 02:00 run on a box that's of
   (`Restart=on-failure`, `RestartSec` ≈ 5 min) — a transient (draupnir asleep,
   network still settling) just loops until it goes through. The workflow, in
   order:
-  1. `syncoid --no-sync-snap --sendoptions=w syncoid@draupnir:tank/immich  cold/immich`
-  2. `syncoid --no-sync-snap --sendoptions=w syncoid@draupnir:tank/backups cold/backups`
-  3. `sanoid --prune-snapshots` over `cold/*` (bound the received history).
-  4. **success ntfy** ("sync OK, snapshot X, N GB").
-  5. **`poweroff`** — the box shuts itself down once copy #3 is current, so the
+  1. `syncoid --no-sync-snap --sendoptions=w syncoid@draupnir:tank/immich cold/immich`
+  2. `sanoid --prune-snapshots` over `cold/*` (bound the received history).
+  3. **success ntfy** ("sync OK, snapshot X, N GB").
+  4. **`poweroff`** — the box shuts itself down once copy #3 is current, so the
      "plug in, walk away" flow is fully hands-off.
 
   `--no-sync-snap` reuses sanoid's snapshots instead of creating throwaway
@@ -277,12 +275,10 @@ that's the trade, not a bug.
 - **niflheim → ntfy reachability** over tailscale — verify the AdGuard rewrite
   + bifrost subnet route resolve `ntfy.lan.valgrindr.net` from a remote node
   (should, given `--accept-routes`; confirm).
-- **`tank/backups` has no snapshots to send.** syncoid `--no-sync-snap` can only
-  ship existing snapshots, but sanoid snapshots `tank/immich` only — so the
-  backups leg (§1 table) is inert as designed. Fix before that leg goes live:
-  give `tank/backups` a *light* sanoid policy (keeps `--no-sync-snap` + the
-  no-`destroy` delegation). See `hosts/draupnir/CLAUDE.md` → "Adding a new
-  dataset to the offsite replica".
+- **Finance offsite (`tank/backups`) is out of scope here** — the dataset was
+  removed 2026-07-24 (empty, unbuilt). When built it rejoins via the checklist
+  in `hosts/draupnir/CLAUDE.md`, and will need its own snapshot policy to
+  replicate (syncoid `--no-sync-snap` ships only existing snapshots).
 - **Second offsite later?** One remote box is copy #3; a cloud restic tier
   (B2/Storj) could be added as copy #4 without touching this. Deferred.
 - **niflheim uptime is by design** — the box is off most of the month (§3), so
@@ -320,9 +316,9 @@ that's the trade, not a bug.
    addresses via tailscale, not a fixed `192.168.1.x`. Install via
    nixos-anywhere on the home LAN (draupnir pattern).
 2. **Delegate on draupnir** — `syncoid` user, `zfs allow
-   send,snapshot,bookmark,mount` on `tank/{immich,backups}` (no `destroy`, no
-   `hold`), authorized key. sops for the keypair.
-3. **syncoid on niflheim** — pull of `tank/{immich,backups}` raw,
+   send,snapshot,bookmark,mount` on `tank/immich` (no `destroy`, no `hold`),
+   authorized key. sops for the keypair.
+3. **syncoid on niflheim** — pull of `tank/immich` raw,
    `--no-sync-snap`, bookmark-based base, driven **run-on-connect** (boot +
    network-online after tailscaled, `Restart=on-failure` backoff); sanoid prune
    on `cold/*` (0h/30d/24m/10y) and **`poweroff` on success** in the same

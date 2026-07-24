@@ -22,10 +22,6 @@ let
       src = "tank/immich";
       dst = "cold/immich";
     }
-    {
-      src = "tank/backups";
-      dst = "cold/backups";
-    }
   ];
 
   ntfyUrl = "https://ntfy.lan.valgrindr.net";
@@ -80,7 +76,7 @@ let
       # announce, and shut down — copy #3 is current.
       sanoid --prune-snapshots --verbose || true
       notify "niflheim offsite: sync OK" "default" \
-        "cold/{immich,backups} up to date at $(date -u +%FT%TZ). Powering off."
+        "cold/immich up to date at $(date -u +%FT%TZ). Powering off."
       systemctl poweroff
     '';
   };

@@ -11,8 +11,8 @@ phases, UGOS rollback procedure).
   midgard at `~/backups/ugos-nvme0n1-2026-07-15.img.zst` (+ sha256 + layout
   notes) if factory rollback is ever needed.
 - Data: ZFS **raidz1** pool `tank` over the 4x 1 TB SATA bays (~2.7 TiB usable),
-  declared in `disko-data.nix`. Datasets: `tank/media`, `tank/immich`,
-  `tank/backups` → mounted at `/tank/*` (legacy mountpoints via fileSystems).
+  declared in `disko-data.nix`. Datasets: `tank/media`, `tank/immich`
+  → mounted at `/tank/*` (legacy mountpoints via fileSystems).
   `networking.hostId` is load-bearing for pool import — never change it.
 - Encryption: native ZFS (aes-256-gcm) on the pool root, inherited by all
   datasets. Key is a plaintext hex file at `/persist/tank.key` (auto-unlock at
@@ -68,12 +68,12 @@ pressure, `homelab.services.immich.machineLearning = false` is the next lever.
 
 - **`sanoid.nix`** — automatic ZFS snapshots of `tank/immich` only (24h / 30d /
   12m / **3y** via the `irreplaceable` template; the 3 yearlies exist so the
-  offsite copy can *receive* them — offsite plan §4). `tank/media` and
-  `tank/backups` are deliberately NOT snapshotted (rationale in the file
-  header). Recover files from `/tank/immich/.zfs/snapshot/<name>/`.
+  offsite copy can *receive* them — offsite plan §4). `tank/media` is
+  deliberately NOT snapshotted (rationale in the file header). Recover files
+  from `/tank/immich/.zfs/snapshot/<name>/`.
 - **`syncoid-source.nix`** — makes draupnir a **send-only** replication source
   for the offsite box (niflheim). A dedicated `syncoid` user has
-  `send,snapshot,bookmark,mount` delegated on `tank/{immich,backups}` (no
+  `send,snapshot,bookmark,mount` delegated on `tank/immich` (no
   `destroy`/`receive`/`hold`); niflheim *pulls*. **INERT** until niflheim's
   pubkey is added to `openssh.authorizedKeys.keys`. Design:
   `docs/immich-offsite-backup-plan.md`.
@@ -99,20 +99,21 @@ Each is a one-liner; other datasets' legs are untouched. **Removing** a dataset
 is the only sticky bit: `zfs allow` persists in the pool, so drop it from the
 list *and* `zfs unallow syncoid … tank/<name>` by hand.
 
-> **Known gap — `tank/backups` is not yet snapshotted**, so as currently wired
-> its offsite leg (step 1) would send nothing. It's a *future* leg (niflheim
-> isn't built), not a live failure. Before the finance restic repo goes offsite,
-> give `tank/backups` a light sanoid policy — this keeps `--no-sync-snap` and the
-> no-`destroy` delegation; dropping `--no-sync-snap` instead would force granting
-> `destroy`, which the security model rejects.
+> The finance-stack offsite (a `tank/backups` restic target) is **deferred** —
+> that dataset was removed 2026-07-24 (nothing wrote to it). When it's built,
+> it'll need step 1 (a snapshot policy) too: syncoid `--no-sync-snap` can only
+> ship existing snapshots, and a light policy keeps the no-`destroy` delegation
+> (dropping `--no-sync-snap` would force granting `destroy`, which we reject).
 
 ## Roles (planned, see plan doc Phases 3–5)
 
-- NFSv4 exports of `/tank/{media,backups}` to asgard only (gid contract:
-  `media` gid 1500 pinned on both hosts). `tank/immich` no longer needs
-  exporting — Immich runs locally on this host.
-- Restic offsite target for the finance stack. Offsite replication of
-  `tank/immich` is **decided and in progress**: syncoid raw-send (pull) to a
+- NFSv4 export of `/tank/media` to asgard only (gid contract: `media` gid 1500
+  pinned on both hosts). `tank/immich` no longer needs exporting — Immich runs
+  locally on this host. (`tank/backups` export returns with the finance offsite.)
+- Finance-stack offsite (a restic `tank/backups` target) is **deferred** — the
+  reserved dataset was removed 2026-07-24; re-add when it's built. Offsite
+  replication of `tank/immich` is **decided and in progress**: syncoid raw-send
+  (pull) to a
   dedicated intermittent ZFS box, niflheim, over the tailnet. Source side
   (`syncoid-source.nix`) is deployed; niflheim host is scaffolded but awaits
   hardware. See `docs/immich-offsite-backup-plan.md` + `hosts/niflheim/CLAUDE.md`.
