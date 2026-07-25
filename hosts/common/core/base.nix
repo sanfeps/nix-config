@@ -46,6 +46,7 @@
   environment.systemPackages = with pkgs; [
     git
     ghostty.terminfo
+    tmux
     vim
   ];
 }
