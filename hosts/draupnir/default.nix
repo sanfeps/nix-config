@@ -81,6 +81,24 @@
   # plus those working sets leaves the kernel thrashing under ML jobs. ARC
   # gives memory back under pressure, but slowly — a hard cap is calmer.
   boot.kernelParams = ["zfs.zfs_arc_max=3221225472"];
+
+  # Compressed RAM swap. The box has NO disk swap (btrfs rootfs — an NVMe
+  # swapfile needs NOCOW/no-snapshot care), so a memory spike had nothing to
+  # fall back on: on 2026-07-25 an Immich ML worker (.gunicorn) ballooned to
+  # ~4.3 GiB and the OOM-killer took out the running photo-import CLI (and
+  # ssh-agent, dbus). zram gives the kernel a cushion — cold anonymous pages
+  # are zstd-compressed (~2-3x) instead of triggering a kill. It lives in RAM,
+  # so it extends effective memory rather than adding real capacity; the real
+  # long-term fix for Immich-with-ML on 8 GiB is more RAM. Keep ML stopped
+  # during bulk imports regardless (systemctl stop immich-machine-learning).
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryPercent = 100; # zram device up to ~RAM size; compressed, so cheap
+  };
+  # Nudge the kernel to actually use zram (compressed) before evicting caches.
+  boot.kernel.sysctl."vm.swappiness" = 100;
+
   services.zfs.autoScrub = {
     enable = true;
     interval = "monthly";
