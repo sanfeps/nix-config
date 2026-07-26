@@ -669,6 +669,36 @@ let
                   log(f"seerr: POST {arr} failed ({e.code}): {e.read()[:200]!r}")
 
 
+      def clear_jellyfin_for_wizard():
+          """Blank settings.jellyfin so /api/v1/auth/jellyfin can register fresh.
+
+          On an uninitialized stack that already has a Jellyfin connection
+          written (a prior ensure_jellyfin_connection run, or a half-finished
+          setup), auth/jellyfin 500s "Jellyfin hostname already configured".
+          Clearing `ip` makes Seerr treat it as unconfigured again. Bounces Seerr
+          so it reloads. Returns True if it rewrote (caller must re-wait).
+          """
+          path = Path(SEERR_SETTINGS)
+          if not path.exists():
+              return False
+          data = json.loads(path.read_text())
+          jf = data.get("jellyfin", {})
+          if not jf.get("ip"):
+              return False  # already unconfigured
+          st = path.stat()
+          jf["ip"] = ""
+          data["jellyfin"] = jf
+          log("seerr: clearing stale Jellyfin connection so the wizard can register fresh")
+          subprocess.run([SYSTEMCTL, "stop", "seerr.service"], check=False)
+          tmp = path.with_name(path.name + ".tmp")
+          tmp.write_text(json.dumps(data))
+          os.chown(tmp, st.st_uid, st.st_gid)
+          os.chmod(tmp, st.st_mode & 0o777)
+          os.replace(tmp, path)
+          subprocess.run([SYSTEMCTL, "start", "seerr.service"], check=False)
+          return True
+
+
       def reconcile_seerr_wizard():
           """Replicate Seerr's first-run wizard via API:
             1. POST /api/v1/auth/jellyfin — log into Jellyfin and create the
@@ -777,9 +807,12 @@ let
               log(f"seerr: could not extract API key — {e}")
               return
 
-          # Self-heal a stack that got marked initialized without a persisted
-          # Jellyfin connection (login otherwise dies on http://undefined:...).
-          if ensure_jellyfin_connection():
+          # Self-heal drift on an ALREADY-initialized stack (login otherwise dies
+          # on http://undefined:...). Deliberately skipped on a fresh stack: the
+          # wizard below must own the first Jellyfin registration via
+          # /api/v1/auth/jellyfin, which 500s "hostname already configured" if we
+          # pre-seed settings.jellyfin here first.
+          if initialized and ensure_jellyfin_connection():
               if not wait_seerr_ready(time.time() + READY_TIMEOUT):
                   return
               try:
@@ -789,6 +822,11 @@ let
                   return
 
           if not initialized:
+              # A stale/partial Jellyfin connection makes the wizard's
+              # auth/jellyfin 500 "already configured" — clear it first.
+              if clear_jellyfin_for_wizard():
+                  if not wait_seerr_ready(time.time() + READY_TIMEOUT):
+                      return
               log("seerr: wizard not yet completed — attempting auto-run from sops creds")
               reconcile_seerr_wizard()
               # Re-read; the wizard run above should have flipped initialized.
