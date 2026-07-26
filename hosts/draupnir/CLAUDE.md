@@ -11,8 +11,9 @@ phases, UGOS rollback procedure).
   midgard at `~/backups/ugos-nvme0n1-2026-07-15.img.zst` (+ sha256 + layout
   notes) if factory rollback is ever needed.
 - Data: ZFS **raidz1** pool `tank` over the 4x 1 TB SATA bays (~2.7 TiB usable),
-  declared in `disko-data.nix`. Datasets: `tank/media`, `tank/immich`
-  → mounted at `/tank/*` (legacy mountpoints via fileSystems).
+  declared in `disko-data.nix`. Datasets: `tank/media`, `tank/immich`,
+  `tank/essentials` → mounted at `/tank/*` (legacy mountpoints via fileSystems).
+  `tank/essentials` was `zfs create`d by hand (disko only formats at install).
   `networking.hostId` is load-bearing for pool import — never change it.
 - Encryption: native ZFS (aes-256-gcm) on the pool root, inherited by all
   datasets. Key is a plaintext hex file at `/persist/tank.key` (auto-unlock at
@@ -66,11 +67,18 @@ RAM note: 8 GiB total, shared with the ZFS ARC — capped at 3 GiB via
 `zfs.zfs_arc_max` in `default.nix`. If Immich ML jobs still cause memory
 pressure, `homelab.services.immich.machineLearning = false` is the next lever.
 
-- **`sanoid.nix`** — automatic ZFS snapshots of `tank/immich` only (24h / 30d /
-  12m / **3y** via the `irreplaceable` template; the 3 yearlies exist so the
-  offsite copy can *receive* them — offsite plan §4). `tank/media` is
-  deliberately NOT snapshotted (rationale in the file header). Recover files
-  from `/tank/immich/.zfs/snapshot/<name>/`.
+- **`nfs.nix`** — NFSv4 export of `tank/media` (arr library) + `tank/essentials`
+  (curated keep-set) to **asgard only** (`192.168.1.54` in the export ACL). The
+  media stack stays on asgard; this box just serves the bytes. Pins
+  `users.groups.media.gid = 1500` (the numeric cross-host contract — asgard's
+  `media` group matches) and owns the setgid `2775` library tree
+  (`/tank/media/library/{series,movies,music}`). Only firewall hole: TCP 2049.
+- **`sanoid.nix`** — automatic ZFS snapshots of `tank/immich` **and
+  `tank/essentials`** (24h / 30d / 12m / **3y** via the `irreplaceable`
+  template; the 3 yearlies exist so the offsite copy can *receive* them —
+  offsite plan §4). `tank/media` is deliberately NOT snapshotted (churny +
+  re-downloadable; rationale in the file header). Recover files from
+  `/tank/<ds>/.zfs/snapshot/<name>/`.
 - **`syncoid-source.nix`** — makes draupnir a **send-only** replication source
   for the offsite box (niflheim). A dedicated `syncoid` user has
   `send,snapshot,bookmark,mount` delegated on `tank/immich` (no
@@ -105,11 +113,12 @@ list *and* `zfs unallow syncoid … tank/<name>` by hand.
 > ship existing snapshots, and a light policy keeps the no-`destroy` delegation
 > (dropping `--no-sync-snap` would force granting `destroy`, which we reject).
 
-## Roles (planned, see plan doc Phases 3–5)
+## Roles
 
-- NFSv4 export of `/tank/media` to asgard only (gid contract: `media` gid 1500
-  pinned on both hosts). `tank/immich` no longer needs exporting — Immich runs
-  locally on this host. (`tank/backups` export returns with the finance offsite.)
+- **NFSv4 export of `/tank/media` + `/tank/essentials` to asgard only** — DONE
+  (`services/nfs.nix`). gid contract: `media` gid 1500 pinned on both hosts.
+  `tank/immich` is not exported — Immich runs locally. (`tank/backups` export
+  returns with the finance offsite.)
 - Finance-stack offsite (a restic `tank/backups` target) is **deferred** — the
   reserved dataset was removed 2026-07-24; re-add when it's built. Offsite
   replication of `tank/immich` is **decided and in progress**: syncoid raw-send
