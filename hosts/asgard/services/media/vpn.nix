@@ -99,7 +99,7 @@ in {
     # (Proven live: FlareSolverr's Chromium went from 100% ERR_NAME_NOT_RESOLVED
     # to resolving once bound; the glibc *arrs behave the same.) The
     # single-request-reopen option appended above now applies to them too.
-    (lib.genAttrs ["qbittorrent" "prowlarr" "sonarr" "radarr" "flaresolverr"]
+    (lib.genAttrs ["qbittorrent" "prowlarr" "sonarr" "radarr"]
       (_: {
         serviceConfig.BindReadOnlyPaths = [
           "/etc/netns/${ns}/resolv.conf:/etc/resolv.conf"
