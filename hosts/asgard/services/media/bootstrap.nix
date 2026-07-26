@@ -449,7 +449,14 @@ let
 
       HOST = "127.0.0.1"
       SEERR_PORT = 5055
-      JELLYFIN_PORT = 8096
+      # Jellyfin moved to draupnir 2026-07-26 (Quick Sync HW transcode). Seerr
+      # stays on asgard (tied to the netns *arrs), so it reaches Jellyfin over
+      # the LAN via draupnir's own Caddy edge — NOT host loopback anymore.
+      # AdGuard answers 192.168.1.56 for this name; TLS terminates at 443 with
+      # the valid *.lan wildcard cert. Same shape as ARR_PROXIES below.
+      JELLYFIN_IP = "jellyfin.lan.valgrindr.net"
+      JELLYFIN_PORT = 443
+      JELLYFIN_SSL = True
       JELLYFIN_EXTERNAL = "https://jellyfin.lan.valgrindr.net"
       SYSTEMCTL = "${pkgs.systemd}/bin/systemctl"
 
@@ -505,21 +512,21 @@ let
 
 
       def ensure_jellyfin_connection():
-          """Enforce Seerr's local Jellyfin connection.
+          """Enforce Seerr's Jellyfin connection.
 
-          Jellyfin runs on the host loopback at 127.0.0.1:8096 (Caddy fronts
-          the public name). Seerr's getHostname() builds its server URL from
-          {useSsl, ip, port, urlBase} on settings.jellyfin, so any drift there
-          breaks every login *before* credentials are checked: a missing ip
-          yields 'http://undefined:undefined', and a stale value (we've seen
-          port=80 + useSsl=null) points at a dead address. The wizard auto-run
-          is gated on initialized=false, so once the stack is initialized it
-          never corrects this on its own.
+          Jellyfin runs on draupnir, reached via its Caddy edge
+          (https://jellyfin.lan.valgrindr.net:443). Seerr's getHostname() builds
+          its server URL from {useSsl, ip, port, urlBase} on settings.jellyfin,
+          so any drift there breaks every login *before* credentials are checked:
+          a missing ip yields 'http://undefined:undefined', and a stale value
+          (we've seen port=80 + useSsl=null) points at a dead address. The wizard
+          auto-run is gated on initialized=false, so once the stack is
+          initialized it never corrects this on its own.
 
-          We pin the connection-critical keys to the loopback values and leave
-          name/serverId/apiKey/libraries intact. Seerr only reads settings.json
-          at startup, so we also bounce it to load the corrected values.
-          Returns True if it rewrote + restarted Seerr (caller must re-wait).
+          We pin the connection-critical keys to the draupnir-edge values and
+          leave name/serverId/apiKey/libraries intact. Seerr only reads
+          settings.json at startup, so we also bounce it to load the corrected
+          values. Returns True if it rewrote + restarted Seerr (caller re-waits).
           """
           path = Path(SEERR_SETTINGS)
           if not path.exists():
@@ -527,9 +534,9 @@ let
           data = json.loads(path.read_text())
           jf = data.get("jellyfin", {})
           desired = {
-              "ip":      HOST,
+              "ip":      JELLYFIN_IP,
               "port":    JELLYFIN_PORT,
-              "useSsl":  False,
+              "useSsl":  JELLYFIN_SSL,
               "urlBase": "",
           }
           if all(jf.get(k) == v for k, v in desired.items()):
@@ -550,7 +557,7 @@ let
           os.chmod(tmp, st.st_mode & 0o777)
           os.replace(tmp, path)
           subprocess.run([SYSTEMCTL, "start", "seerr.service"], check=False)
-          log(f"seerr: connection repaired (ip={HOST} port={JELLYFIN_PORT}); "
+          log(f"seerr: connection repaired (ip={JELLYFIN_IP} port={JELLYFIN_PORT}); "
               "Seerr restarted")
           return True
 
@@ -690,9 +697,9 @@ let
               "username":   jf_user,
               "password":   jf_pwd,
               "email":      f"{jf_user}@local",
-              "hostname":   HOST,
+              "hostname":   JELLYFIN_IP,
               "port":       JELLYFIN_PORT,
-              "useSsl":     False,
+              "useSsl":     JELLYFIN_SSL,
               "urlBase":    "",
               "serverType": 2,  # 1 = Plex, 2 = Jellyfin (Jellyseerr convention)
           }
@@ -709,7 +716,7 @@ let
               log("seerr: /api/v1/auth/jellyfin succeeded (mirror admin set up)")
           except urllib.error.HTTPError as e:
               log(f"seerr: /api/v1/auth/jellyfin failed ({e.code}): {e.read()[:300]!r}. "
-                  f"Verify Jellyfin is reachable at {HOST}:{JELLYFIN_PORT} and that "
+                  f"Verify Jellyfin is reachable at {JELLYFIN_IP}:{JELLYFIN_PORT} and that "
                   "the seeded creds match a Jellyfin admin account.")
               return False
           except (urllib.error.URLError, TimeoutError, OSError) as e:
@@ -733,9 +740,9 @@ let
           # submits `ip`, and getHostname reads `settings.jellyfin.ip`), unlike
           # /api/v1/auth/jellyfin above which takes `hostname` and maps it to ip.
           settings_body = {
-              "ip":                HOST,
+              "ip":                JELLYFIN_IP,
               "port":              JELLYFIN_PORT,
-              "useSsl":            False,
+              "useSsl":            JELLYFIN_SSL,
               "urlBase":           "",
               "externalHostname":  JELLYFIN_EXTERNAL,
           }

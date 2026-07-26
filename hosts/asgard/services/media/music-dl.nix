@@ -380,7 +380,7 @@ in {
   systemd.services.yt2jellyd = {
     description = "Phone-friendly HTTP wrapper for yt2jelly";
     wantedBy = ["multi-user.target"];
-    after = ["network-online.target" "jellyfin.service"];
+    after = ["network-online.target"];
     wants = ["network-online.target"];
     environment = {
       YT2JELLY_BIN = "${yt2jelly}/bin/yt2jelly";
@@ -389,7 +389,10 @@ in {
       YT2JELLYD_TOKEN_FILE = "/var/lib/yt2jellyd/token";
       MUSIC_LIB = "/mnt/nas/media/library/music";
       AUDIO_FORMAT = "mp3";
-      JELLYFIN_URL = "http://127.0.0.1:8096";
+      # Jellyfin moved to draupnir 2026-07-26; reach it via its Caddy edge
+      # (AdGuard answers 192.168.1.56, IPv4-only A record, so urllib's lack of
+      # Happy-Eyeballs is a non-issue here).
+      JELLYFIN_URL = "https://jellyfin.lan.valgrindr.net";
       HOME = "/var/lib/yt2jellyd";
       XDG_CACHE_HOME = "/var/lib/yt2jellyd/cache";
       XDG_CONFIG_HOME = "/var/lib/yt2jellyd/config";

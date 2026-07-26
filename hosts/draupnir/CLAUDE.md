@@ -66,6 +66,32 @@ Wired in `services/default.nix`:
 RAM note: 8 GiB total, shared with the ZFS ARC — capped at 3 GiB via
 `zfs.zfs_arc_max` in `default.nix`. If Immich ML jobs still cause memory
 pressure, `homelab.services.immich.machineLearning = false` is the next lever.
+Jellyfin (below) also lives here now — its idle footprint is small and QSV
+transcode leans on the iGPU not RAM, but a concurrent Immich-ML bulk import +
+active transcode is the memory-pressure case to watch (zram cushions it).
+
+- **`jellyfin.nix`** — Jellyfin playback server. **Moved off asgard 2026-07-26**:
+  asgard is a QEMU VM whose only GPU is a virtual `card0` with no render node,
+  so any file a client couldn't direct-play (HEVC video, E-AC-3/DDP audio — the
+  x265 BluRay rips) forced a CPU transcode on a feature-masked virtual CPU and
+  playback froze. The NFS hop was NOT the cause (measured ~116 MB/s, ×10 over any
+  single stream). draupnir is bare-metal Alder Lake (Pentium Gold 8505, **Gen12
+  Quick Sync**, `/dev/dri/renderD128`) AND owns the library locally, so this both
+  enables HW transcode and drops the NFS round-trip. Binds `0.0.0.0:8096` (no LAN
+  firewall hole — local Caddy fronts `https://jellyfin.lan.valgrindr.net`; AdGuard
+  answers `192.168.1.56`); `:8096` opened on **tailscale0 only** for guests
+  (headscale ACL `group:guest → draupnir:8096`). The `jellyfin` user is in
+  `render`+`video` (renderD128/card0) and `media` (gid 1500, library read). The
+  graphics stack (`hardware.graphics` + `intel-media-driver` + `vpl-gpu-rt` +
+  `intel-compute-runtime`) is wired in Nix, but **HW transcode itself is a
+  one-time UI step** — Dashboard → Playback → QuickSync/VAAPI, device
+  `/dev/dri/renderD128` (services.jellyfin has no Nix knob for encoder settings).
+  Fresh install (no state migrated from asgard): create the admin user + point
+  the libraries at the local paths once — Movies → `/tank/media/library/movies`
+  **and** `/tank/essentials` (snapshotted keep-set), Shows → `.../series`, Music
+  → `.../music`. `RequiresMountsFor` guards against scanning the empty mountpoint
+  before the ZFS legacy mounts are up. Seerr (still on asgard) and yt2jelly reach
+  it over the LAN via this Caddy edge, not loopback.
 
 - **`nfs.nix`** — NFSv4 export of `tank/media` (arr library) + `tank/essentials`
   (curated keep-set) to **asgard only** (`192.168.1.54` in the export ACL). The
@@ -118,7 +144,11 @@ list *and* `zfs unallow syncoid … tank/<name>` by hand.
 - **NFSv4 export of `/tank/media` + `/tank/essentials` to asgard only** — DONE
   (`services/nfs.nix`). gid contract: `media` gid 1500 pinned on both hosts.
   `tank/immich` is not exported — Immich runs locally. (`tank/backups` export
-  returns with the finance offsite.)
+  returns with the finance offsite.) NOTE: the export still exists because the
+  **acquisition** plane (qBittorrent + *arrs) stays on asgard and writes the
+  library over NFS; **Jellyfin now reads it locally** (moved here 2026-07-26).
+- **Jellyfin playback + Quick Sync HW transcode** — DONE (`services/jellyfin.nix`,
+  see Services above). Reads the library locally off `tank/media`/`tank/essentials`.
 - Finance-stack offsite (a restic `tank/backups` target) is **deferred** — the
   reserved dataset was removed 2026-07-24; re-add when it's built. Offsite
   replication of `tank/immich` is **decided and in progress**: syncoid raw-send

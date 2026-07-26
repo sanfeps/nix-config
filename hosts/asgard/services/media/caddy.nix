@@ -28,8 +28,9 @@ let
   };
 in {
   services.caddy.virtualHosts =
-    # Unconfined — host loopback.
-    (vhost "jellyfin" "127.0.0.1:8096")
+    # Unconfined — host loopback. (Jellyfin moved to draupnir 2026-07-26 for
+    # Quick Sync HW transcode — see hosts/draupnir/services/jellyfin.nix.)
+    #
     # Seerr also binds asgard's TAILNET IP (100.64.0.2), not just the LAN IP that
     # services/caddy.nix `default_bind` pins every other vhost to. That puts it on
     # the same guest-reachable tailnet :443 listener as Fluxer, so group:guest
@@ -37,7 +38,7 @@ in {
     # rewritten to 100.64.0.2 for everyone (bifrost dns.nix) so all clients land
     # here; the *.lan wildcard cert still matches. See services/fluxer/CLAUDE.md
     # for the full rationale of the carve-out.
-    // {
+    {
       "seerr.lan.valgrindr.net".extraConfig = ''
         bind ${asgardLanIp} ${asgardTailnetIp}
         reverse_proxy 127.0.0.1:5055

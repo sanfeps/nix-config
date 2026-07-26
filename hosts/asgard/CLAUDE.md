@@ -20,7 +20,7 @@ All live under `services/` and are wired in `services/default.nix`:
   - **Backups**: `pg_dump` custom format daily, persisted at `/persist/var/backups/postgres/`, validated end-to-end (restorable).
 - **`home-automation/`** — Home Assistant + Mosquitto.
   - Home Assistant is enabled via the reusable `homelab.services.homeAssistant` module (`modules/homelab/services/home-assistant/`); the host file only sets `name = "Asgard"`, the `url`, and the co-located mqtt broker via `extraConfig`. Binds `127.0.0.1:8123`, fronted by asgard's local Caddy at `https://home.lan.valgrindr.net` (per-host-caddy Phase 2b). AdGuard rewrites the name directly to `192.168.1.54`; bifrost is not in the request path. `trusted_proxies` is `127.0.0.1`/`::1` only — Caddy is local so no cross-host hop to trust. Mosquitto stays a separate host file.
-- **`media/`** — see `services/media/CLAUDE.md` for the full media stack (Jellyfin, Seerr, Sonarr/Radarr/Prowlarr in a Mullvad netns, qBittorrent, Recyclarr).
+- **`media/`** — see `services/media/CLAUDE.md` for the full media stack (Seerr, Sonarr/Radarr/Prowlarr in a Mullvad netns, qBittorrent, Recyclarr). **Jellyfin moved to draupnir 2026-07-26** for Quick Sync HW transcode (asgard's VM has no usable GPU); asgard still holds acquisition + Seerr + yt2jelly and NFS-mounts the library so the *arrs keep writing to it.
 - **`fluxer/`** — self-hosted **Fluxer** (Discord alternative) at `https://fluxer.lan.valgrindr.net`. The **only docker-compose in the repo**: a ~22-container stack vendored verbatim and run via `podman-compose` under a declarative systemd unit (no native nixpkgs option exists). Fluxer's bundled Caddy is loopback-only HTTP (`127.0.0.1:8080`) and asgard's own Caddy fronts it; LiveKit voice binds 7881/tcp + 7882/udp (LAN/tailnet). Import in `services/default.nix` stays **commented** until the `fluxer/*` sops secrets are seeded — see `services/fluxer/CLAUDE.md` for the one-time bootstrap, the compose patch, and ops/backup notes.
 
 ## Tailnet client
@@ -56,5 +56,5 @@ NIX_SSHOPTS="-i ~/.ssh/lykill" nixos-rebuild switch --flake .#asgard \
 
 ## Recovery cheats
 
-- **Caddy 502 on a vhost (from outside)**: every asgard app (Ghostfolio, Home Assistant, Firefly, the media stack) terminates TLS on asgard — check `systemctl status caddy` + `journalctl -u caddy -n 100` here. Only bifrost-local names (adguard, homepage, headplane, headscale) terminate on bifrost.
+- **Caddy 502 on a vhost (from outside)**: every asgard app (Ghostfolio, Home Assistant, Firefly, the media stack minus Jellyfin) terminates TLS on asgard — check `systemctl status caddy` + `journalctl -u caddy -n 100` here. **`jellyfin.lan` now terminates on draupnir** (`192.168.1.56`) — check Caddy there. Only bifrost-local names (adguard, homepage, headplane, headscale) terminate on bifrost.
 - **`*.lan.valgrindr.net` not resolving from the LAN**: AdGuard on bifrost (`192.168.1.55`) owns LAN DNS. Check `nc -vz 192.168.1.55 53` from the client. The rewrite answer determines which host the request lands on — `192.168.1.54` for asgard apps, `192.168.1.55` for bifrost-local services.

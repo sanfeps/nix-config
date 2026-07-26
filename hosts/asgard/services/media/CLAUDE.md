@@ -1,6 +1,8 @@
 # media
 
-Declarative media stack on asgard. Everything is native NixOS — no docker-compose, no Gluetun container. The acquisition plane (qbittorrent + the indexer/automation *arrs) runs inside a Mullvad WireGuard network namespace via [VPN-Confinement](https://github.com/Maroka-chan/VPN-Confinement); the playback / request plane (Jellyfin, Seerr) and the TRaSH sync (Recyclarr) sit outside the namespace on the host's normal network.
+Declarative media stack on asgard. Everything is native NixOS — no docker-compose, no Gluetun container. The acquisition plane (qbittorrent + the indexer/automation *arrs) runs inside a Mullvad WireGuard network namespace via [VPN-Confinement](https://github.com/Maroka-chan/VPN-Confinement); the request plane (Seerr) and the TRaSH sync (Recyclarr) sit outside the namespace on the host's normal network.
+
+> **Jellyfin moved to draupnir 2026-07-26.** The playback server used to run here, but asgard is a QEMU VM with no usable GPU (virtual `card0`, no render node), so HEVC/DDP files forced CPU transcode and playback froze. It now lives on bare-metal draupnir (`hosts/draupnir/services/jellyfin.nix`) with Intel Quick Sync HW transcode, reading the library locally. **asgard still owns everything else** (acquisition + Seerr + yt2jelly), and still NFS-mounts the library so the *arrs and yt2jelly can write to it. Seerr and yt2jelly reach Jellyfin over the LAN via draupnir's Caddy edge (`https://jellyfin.lan.valgrindr.net`), not loopback. Mentions of "Jellyfin on 127.0.0.1:8096" below are historical.
 
 Scaffold mode is the rule: the `./media` import in `hosts/asgard/services/default.nix` stays **commented** until the manual bootstrap below is done. The module files themselves can land in `main` independently.
 
@@ -13,7 +15,6 @@ Scaffold mode is the rule: the `./media` import in `hosts/asgard/services/defaul
                                   ┌────────────────────────────────────────┐
                                   │ asgard (192.168.1.54) — host net        │
                                   │  Caddy *.lan.valgrindr.net (own LE cert)│
-                                  │   ├─ jellyfin → 127.0.0.1:8096          │
                                   │   ├─ seerr    → 127.0.0.1:5055          │
                                   │   └─ qbit/prowlarr/sonarr/radarr        │
                                   │        → 192.168.15.1:<port> (veth)     │
@@ -28,7 +29,8 @@ Scaffold mode is the rule: the `./media` import in `hosts/asgard/services/defaul
                                   └─────────────────────────────────────────┘
 ```
 
-Per-host-caddy Phase 4: asgard's own Caddy fronts all six WebUIs; bifrost is
+Per-host-caddy Phase 4: asgard's own Caddy fronts the five remaining WebUIs
+(Jellyfin's vhost moved to draupnir with the service); bifrost is
 not in the request path (AdGuard just points the names at asgard). The
 confined four are reached at the namespace veth IP `192.168.15.1:<port>` over
 the `mullvad-br` bridge, **not** loopback — the VPN-Confinement DNAT only
@@ -42,7 +44,7 @@ host loopback for the namespace's return path.
 Two egress requirements, irreconcilable on a single uplink:
 
 - **Acquisition plane** (qbittorrent, prowlarr, sonarr, radarr) — must egress through Mullvad. RSS pulls, indexer scrapes, torrent peers all flow over WireGuard.
-- **Playback / request plane** (Jellyfin, Seerr) — must egress through the LAN. Jellyfin needs LAN-visible DLNA + transcoding, Seerr fetches TMDb metadata.
+- **Request plane** (Seerr) — must egress through the LAN. Seerr fetches TMDb metadata and reaches Jellyfin-on-draupnir via the LAN Caddy edge. (Jellyfin itself moved to draupnir — same LAN-egress reasoning applied there.)
 
 Network namespaces let both coexist on the same host without dual-routing tricks. The *arrs that talk to qBittorrent (sonarr, radarr) live in the same namespace, so the download client URL is `http://127.0.0.1:8080` even though that's the namespace's loopback.
 
@@ -50,13 +52,13 @@ Recyclarr sits **outside** the namespace because (a) it only talks to localhost 
 
 ## File map
 
-- `default.nix` — imports list: vpn, storage, qbittorrent, prowlarr, sonarr, radarr, jellyfin, seerr, recyclarr, bootstrap.
+- `default.nix` — imports list: vpn, storage, qbittorrent, prowlarr, sonarr, radarr, music-dl, yt2jelly-ui, seerr, recyclarr, bootstrap, caddy. (jellyfin.nix removed 2026-07-26 — moved to draupnir.)
 - `vpn.nix` — `vpnNamespaces.mullvad`. Reads `sops.secrets."media/mullvad-wg-conf"`. **Sole** writer of the namespace; per-service modules only append `portMappings`.
 - `storage.nix` — `/srv/media{,/downloads}` (tmpfiles), `users.groups.media` (**gid pinned 1500** — the cross-host contract with draupnir's NFS export; NFSv4 `sec=sys` maps numerically). Two NFSv4 **automounts** off draupnir: `/mnt/nas/media` ← `192.168.1.56:/tank/media` (arr library) and `/mnt/nas/essentials` ← `192.168.1.56:/tank/essentials` (the snapshotted keep-forever set). Downloads stay **ephemeral on /srv** — see "Storage decisions" below. The `media`-group dirs are **setgid `2775`** (not `0775`): the shared-group design only works for *writes* if new subdirs inherit group `media` (setgid) and stay group-writable. Without it, a folder made by one media-group member (the yt2jelly daemon as `yt2jelly`, sonarr/radarr, or a manual `yt2jelly` CLI run as `sanfe`) lands under the creator's *primary* group with no group-write, and the next member hits `mv: Permission denied`. Pair with `umask 002` in the writers (music-dl.nix). The setgid dirs live on **draupnir** now (`hosts/draupnir/services/nfs.nix`); asgard just mounts them.
 - `qbittorrent.nix` — native `services.qbittorrent` with `serverConfig` declaring WebUI + paths. In the netns.
 - `prowlarr.nix` — default `dataDir` (`/var/lib/private/prowlarr` via DynamicUser `StateDirectory`). We deliberately **do not** override `dataDir`: the override's bind-mount + a `root:root 0700` tmpfiles rule on the bind source fight systemd's DynamicUser ownership and wedge the service with `EACCES` on its own data dir. See "DynamicUser + persistence trap" below.
 - `sonarr.nix` / `radarr.nix` — default `dataDir`; persist `/var/lib/{sonarr,radarr}` (static users, no trap). In the netns.
-- `jellyfin.nix` — outside the netns. Libraries point at `/mnt/nas/media/library/{movies,series,music}` + `/mnt/nas/essentials` (draupnir datasets over NFS), set once in the UI (Bootstrap §2).
+- `jellyfin.nix` — **moved to draupnir 2026-07-26** (`hosts/draupnir/services/jellyfin.nix`), where it reads the same library locally off `tank/media`/`tank/essentials` with Quick Sync HW transcode. No Jellyfin unit runs on asgard anymore. Seerr's connection to it + yt2jelly's refresh call now target the draupnir Caddy edge (`https://jellyfin.lan.valgrindr.net`), wired in `bootstrap.nix` / `music-dl.nix`.
 - `music-dl.nix` — `yt2jelly`, a `writeShellApplication` (system package, not a service). One-shot yt-dlp pipeline that grabs a song into `/mnt/nas/media/library/music` under `$artist/Singles/$title`, then Jellyfin's own metadata providers enrich it. Tagging is free/best-effort: yt-dlp keeps YouTube's structured music metadata when present and a `--parse-metadata "title:%(artist)s - %(title)s"` rule recovers `artist` from "Artist - Title" titles (covers label-archive uploads where YouTube only gives the uploader). `ARTIST=`/`TITLE=`/`ALBUM=` env vars override. **Album tags drive Jellyfin grouping**: the script always writes `album` + `album_artist` (yt-dlp never sets `album_artist`, and a *blank* `album` makes Jellyfin guess an album by online name-match, mis-merging unrelated singles). Precedence: `ALBUM=` override → the album YouTube embedded (real music videos carry it) → fallback `"Singles"`; `album_artist` is always set to `artist` (keeps `feat.` tracks out of a Various-Artists bucket). A fast `ffmpeg -c copy` remux applies the tags (thumbnail preserved). Invoker must be in the `media` group, and the library tree must be setgid (see storage.nix above) or the `mv` into a sibling's folder fails. Outside the netns — a manual CLI, not part of the acquisition plane. **No acoustic recognition**: AcoustID/Chromaprint (beets) misses YouTube rips, Shazam-grade APIs (AudD/ACRCloud) are paid, and shazamio is unpackaged/broken in nixpkgs (needs `shazamio-core`) — see the git history of this file for that investigation. If a paid recognizer is ever wanted, add a recognize-step before the tag-write; the pipeline is structured for it. The same file also defines **`yt2jellyd`** — a small Python HTTP daemon (`writePython3Bin`, system user `yt2jelly` in group `media`) that wraps the CLI for phone use: binds `127.0.0.1:8398`, fronted by asgard's Caddy at `https://yt2jelly.lan.valgrindr.net`, bearer-token auth (token auto-generated at `/var/lib/yt2jellyd/token`), accepts only YouTube hosts. `POST /add {"url":…}` runs `yt2jelly` in a thread and then calls Jellyfin `/Library/Refresh` (auth via the `media/jellyfin-admin-*` sops creds, rendered into `yt2jellyd-env`); `GET /jobs` lists recent jobs; `GET /health` is unauthenticated. **Two gotchas:** (1) like any new service it needs an AdGuard rewrite in `hosts/bifrost/services/dns.nix` (`yt2jelly` → asgard) — without it the name doesn't resolve and curl fails silently; flush asgard's resolved cache (`resolvectl flush-caches`) after adding it since the negative answer gets cached. (2) The Jellyfin refresh uses Python `urllib` (no Happy-Eyeballs), so asgard needs the IPv4-first `networking.getaddrinfo.precedence` block in `hosts/asgard/default.nix` or the call hangs on the unreachable tailscale IPv6.
 - `seerr.nix` — outside the netns. Uses `DynamicUser = true` + `StateDirectory = "jellyseerr"` (bind-mount `/var/lib/private/jellyseerr` → `/var/lib/jellyseerr`). Since asgard's rootfs is **not** wiped on boot, this state persists naturally — no `environment.persistence` declaration needed. See header comment in `seerr.nix`.
 - `recyclarr.nix` — outside the netns. Pre-service oneshot stages API keys from each *arr's `config.xml`.
@@ -97,14 +99,17 @@ sops hosts/asgard/secrets.yaml   # add key: media/mullvad-wg-conf, value: full c
 ### 2. Jellyfin admin creds (for Seerr wizard automation)
 
 Jellyfin's first-run wizard is left manual on purpose — its `/Startup/...` API
-shape changes between releases and isn't worth chasing. Walk through it once in
-the Jellyfin UI (create an admin user, point the Movies library at
-`/mnt/nas/media/library/movies` **and** `/mnt/nas/essentials`, Shows at
-`/mnt/nas/media/library/series`, Music at `/mnt/nas/media/library/music`).
-State persists naturally.
+shape changes between releases and isn't worth chasing. **Jellyfin now runs on
+draupnir**, so walk through the wizard on the draupnir instance
+(`https://jellyfin.lan.valgrindr.net`): create an admin user, enable HW
+transcode (Dashboard → Playback → QuickSync/VAAPI, `/dev/dri/renderD128`), and
+point the Movies library at the **local** `/tank/media/library/movies` **and**
+`/tank/essentials`, Shows at `/tank/media/library/series`, Music at
+`/tank/media/library/music`. State persists naturally.
 
-Then seed the same creds in sops so the boot-time reconciler can drive Seerr's
-own first-run wizard via `/api/v1/auth/jellyfin`:
+Then seed the same creds in **asgard's** sops (Seerr lives here) so the
+boot-time reconciler can drive Seerr's own first-run wizard via
+`/api/v1/auth/jellyfin` against the draupnir edge:
 
 ```bash
 sops hosts/asgard/secrets.yaml
@@ -137,7 +142,7 @@ Uncomment `./media` in `hosts/asgard/services/default.nix` and deploy. The Mullv
 
 Every WebUI is fronted by **asgard's own Caddy** (`services.caddyNjalla`, wildcard LE via Njalla DNS-01). bifrost is no longer in the request path — it only answers DNS. The wiring is:
 
-- `hosts/asgard/services/media/caddy.nix` — the six vhosts. Unconfined services (Jellyfin, Seerr) → `127.0.0.1:<port>`; confined services (qBittorrent, Prowlarr, Sonarr, Radarr) → the netns veth IP `192.168.15.1:<port>` (see the topology note above for why loopback won't work for those). **Seerr is special-cased**: it adds `bind 192.168.1.54 100.64.0.2` so it also listens on asgard's tailnet IP, putting it on the same guest-reachable `asgard:443` listener as Fluxer (so `group:guest` can submit requests). Every other media vhost stays LAN-IP-only via `services/caddy.nix` `default_bind`.
+- `hosts/asgard/services/media/caddy.nix` — five vhosts (Jellyfin's moved to draupnir's Caddy). Unconfined service (Seerr) → `127.0.0.1:5055`; confined services (qBittorrent, Prowlarr, Sonarr, Radarr) → the netns veth IP `192.168.15.1:<port>` (see the topology note above for why loopback won't work for those). **Seerr is special-cased**: it adds `bind 192.168.1.54 100.64.0.2` so it also listens on asgard's tailnet IP, putting it on the same guest-reachable `asgard:443` listener as Fluxer (so `group:guest` can submit requests). Every other media vhost stays LAN-IP-only via `services/caddy.nix` `default_bind`.
 - `hosts/bifrost/services/dns.nix` — six AdGuard rewrites. Five point each `*.lan.valgrindr.net` name at **asgard's LAN IP** (`192.168.1.54`); **`seerr` points at asgard's tailnet IP** (`100.64.0.2`) so it lands on the guest-reachable tailnet listener (requires the client be on the tailnet — all our devices are).
 - `hosts/bifrost/services/homepage.nix` — "Media (asgard)" group with all six tiles (URLs unchanged).
 
@@ -211,4 +216,4 @@ Mullvad's official conf includes `DNS = 10.64.0.1`. VPN-Confinement also routes 
 - **qBittorrent WebUI unreachable; unit goes `active`→`inactive` in ~1s, log shows `qBittorrent termination initiated` / `ready to exit` right after `started` (exit 0)**: stale single-instance **lockfile** at `/var/lib/qBittorrent/qBittorrent/config/lockfile`, left behind when qBittorrent was `SIGKILL`ed (a deploy/restart whose stop exceeded the timeout — likely during a cascade of restarts). Every new instance sees the lock, thinks another copy is running, and quits. Restarting `mullvad` does NOT fix it (the lock lives in the profile, not the netns). Fix: `sudo systemctl stop qbittorrent && sudo rm -f /var/lib/qBittorrent/qBittorrent/config/lockfile && sudo systemctl start qbittorrent`, then confirm `ip netns exec mullvad ss -ltn | grep :8080`. Seen 2026-07-26 after the NFS/gid deploy churn.
 - **`media/mullvad-wg-conf` decryption fails**: usual sops drift — `sops updatekeys hosts/asgard/secrets.yaml`. Until decryption succeeds, the namespace fails to come up and every confined service hangs in `activating (auto-restart)`.
 - **Downloads piling up on /srv**: with `Move` semantics, the source should be deleted right after the *arr import. If they're not, the *arr's "Failed to import" log has the reason — usually a permissions issue on the NAS mount or a category mismatch with qBittorrent.
-- **Seerr login fails with "the provided Jellyfin is invalid or the server is not reachable"**: Seerr's stored Jellyfin connection (`settings.jellyfin`) has drifted from the loopback target. Two seen failure modes: (a) `settings.jellyfin.ip` empty → `seerr` journal logs `hostname: http://undefined:undefinedundefined`; (b) `port: 80` + `useSsl: null` → it points at a dead address. `getHostname()` builds the server URL from `{useSsl, ip, port, urlBase}`, so either kills every login *before* credentials are checked. Compounding it, Seerr only reads `settings.json` at startup, so a corrected file does nothing until Seerr restarts. The wizard auto-run in `bootstrap.nix` is gated on `initialized=false` and can't fix an already-initialized stack; `ensure_jellyfin_connection()` in the seerr reconciler now **enforces** `ip=127.0.0.1 port=8096 useSsl=false` (correcting drift, not just empty values) and bounces Seerr. Trigger by hand: `systemctl restart media-bootstrap-seerr`, then watch `journalctl -u media-bootstrap-seerr` for `connection drift … → …; rewriting settings.json` followed by `connection repaired`. Field-name gotcha: the settings key is `ip` (not `hostname`) — `/api/v1/auth/jellyfin` takes `hostname` and maps it to `ip`, but `/api/v1/settings/jellyfin` and `settings.json` use `ip` directly.
+- **Seerr login fails with "the provided Jellyfin is invalid or the server is not reachable"**: Seerr's stored Jellyfin connection (`settings.jellyfin`) has drifted from the loopback target. Two seen failure modes: (a) `settings.jellyfin.ip` empty → `seerr` journal logs `hostname: http://undefined:undefinedundefined`; (b) `port: 80` + `useSsl: null` → it points at a dead address. `getHostname()` builds the server URL from `{useSsl, ip, port, urlBase}`, so either kills every login *before* credentials are checked. Compounding it, Seerr only reads `settings.json` at startup, so a corrected file does nothing until Seerr restarts. The wizard auto-run in `bootstrap.nix` is gated on `initialized=false` and can't fix an already-initialized stack; `ensure_jellyfin_connection()` in the seerr reconciler now **enforces** `ip=jellyfin.lan.valgrindr.net port=443 useSsl=true` (the draupnir Caddy edge, since Jellyfin moved off-host 2026-07-26 — correcting drift, not just empty values) and bounces Seerr. Trigger by hand: `systemctl restart media-bootstrap-seerr`, then watch `journalctl -u media-bootstrap-seerr` for `connection drift … → …; rewriting settings.json` followed by `connection repaired`. Field-name gotcha: the settings key is `ip` (not `hostname`) — `/api/v1/auth/jellyfin` takes `hostname` and maps it to `ip`, but `/api/v1/settings/jellyfin` and `settings.json` use `ip` directly.

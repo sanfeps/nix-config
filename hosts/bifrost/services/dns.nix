@@ -117,9 +117,11 @@ in {
           }
           # per-host-caddy Phase 4: the media stack is fronted by asgard's own
           # Caddy (vhosts in hosts/asgard/services/media/caddy.nix).
+          # Exception: Jellyfin moved to draupnir 2026-07-26 (Quick Sync HW
+          # transcode) — fronted by draupnir's own Caddy now.
           {
             domain = "jellyfin.${lanZone}";
-            answer = asgardIp;
+            answer = draupnirIp;
             enabled = true;
           }
           {

@@ -27,8 +27,9 @@
   #
   # group:guest is for shared-access users (e.g. a friend who gets Jellyfin +
   # the music UI + Fluxer chat + the Seerr request manager). Members reach ONLY
-  # asgard:8096 (Jellyfin), asgard:5050 (yt2jelly-ui, the YouTube→Jellyfin music
-  # adder) and asgard:443 over the tailnet, plus the DNS server on bifrost:53 —
+  # draupnir:8096 (Jellyfin — moved off asgard 2026-07-26 for HW transcode),
+  # asgard:5050 (yt2jelly-ui, the YouTube→Jellyfin music adder) and asgard:443
+  # over the tailnet, plus the DNS server on bifrost:53 —
   # the last because override_local_dns pushes all of their DNS to 100.64.0.3, so
   # blocking it would break their resolver. NOTE asgard:443 is asgard's
   # TAILNET-IP :443, which serves only the vhosts that opt into binding it —
@@ -46,11 +47,12 @@
       },
       "hosts": {
         "asgard": "100.64.0.2/32",
+        "draupnir": "100.64.0.13/32",
         "dns-server": "100.64.0.3/32"
       },
       "acls": [
         {"action": "accept", "src": ["group:admin"], "dst": ["*:*"]},
-        {"action": "accept", "src": ["group:guest"], "dst": ["asgard:8096", "asgard:5050", "asgard:443", "dns-server:53"]}
+        {"action": "accept", "src": ["group:guest"], "dst": ["draupnir:8096", "asgard:5050", "asgard:443", "dns-server:53"]}
       ],
       "autoApprovers": {
         "exitNode": ["group:exit-approvers"],
