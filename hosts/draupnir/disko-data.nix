@@ -82,6 +82,22 @@
             recordsize = "1M";
           };
         };
+        # Curated "keep-forever" films — the handful worth protecting from
+        # fat-finger deletion. A SEPARATE dataset from tank/media precisely so it
+        # can be snapshotted (sanoid) and later replicated offsite, while the
+        # churny/re-downloadable tank/media is neither. Exported to asgard
+        # alongside tank/media (services/nfs.nix); Jellyfin adds it as a second
+        # Movies folder. NOTE: disko only creates datasets at format time — on
+        # the already-formatted pool this one was `zfs create`d by hand:
+        #   zfs create -o mountpoint=legacy -o recordsize=1M tank/essentials
+        essentials = {
+          type = "zfs_fs";
+          mountpoint = "/tank/essentials";
+          options = {
+            mountpoint = "legacy";
+            recordsize = "1M";
+          };
+        };
         # NOTE: a `tank/backups` dataset (finance restic offsite target) was
         # removed 2026-07-24 for simplicity — nothing wrote to it yet. Re-add it
         # here (plus its offsite legs) when the finance offsite plan is built.

@@ -3,10 +3,13 @@
 # snapshots live on the same pool, so they do NOT cover 2-disk failure,
 # fire or theft — that's the (pending) offsite replication's job.
 #
-# Only tank/immich is snapshotted, deliberately:
+# tank/immich and tank/essentials are snapshotted; tank/media is NOT:
 #   - tank/media: re-downloadable by the *arrs and high-churn (imports
 #     replace files constantly) — snapshots would pin deleted releases for
 #     months with no recovery value.
+#   - tank/essentials: hand-curated keep-forever films, low-churn and NOT
+#     re-downloadable on a whim — exactly what snapshots are for. A film is
+#     promoted here by moving it out of tank/media/library/movies by hand.
 # (A tank/backups finance-restic dataset was removed 2026-07-24 — re-add its
 #  snapshot policy alongside the dataset when the finance offsite is built.)
 #
@@ -41,5 +44,6 @@
     # New irreplaceable dataset later (docs, etc.)? `zfs create` it, add it
     # to disko-data.nix, then one line here.
     datasets."tank/immich".useTemplate = ["irreplaceable"];
+    datasets."tank/essentials".useTemplate = ["irreplaceable"];
   };
 }
