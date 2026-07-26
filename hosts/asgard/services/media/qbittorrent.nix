@@ -1,4 +1,9 @@
-{config, ...}:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 # qBittorrent — download client confined to the Mullvad WireGuard namespace.
 #
 # Outbound: every byte goes through the tunnel; if the tunnel drops, the
@@ -58,9 +63,39 @@ in {
         DefaultSavePath = "/srv/media/downloads";
         TempPath = "/srv/media/downloads/.incomplete";
         TempPathEnabled = true;
+
+        # Leecher-only cleanup. Mullvad forwards no ports, so we can't seed
+        # meaningfully — cap the share ratio at 0 (satisfied the moment a
+        # download completes) and just PAUSE the torrent when reached. We
+        # deliberately do NOT "remove + delete files" here: that would race the
+        # *arr and could delete the payload before Sonarr/Radarr import it.
+        # Instead, the paused torrent reads as "done seeding", which lets the
+        # *arrs' removeCompletedDownloads (bootstrap.nix) remove the torrent and
+        # delete the /srv copy after import. Without this cap the torrent seeds
+        # forever, the *arr never considers it finished, and nothing is cleaned
+        # up (the symptom: completed films linger + keep "sharing").
+        # MaxRatioAction: 0 = Pause, 1 = Remove, 2 = Remove+delete files.
+        GlobalMaxRatio = 0.0;
+        MaxRatioAction = 0;
       };
     };
   };
+
+  # Self-heal the single-instance lockfile. If qBittorrent is SIGKILLed — e.g. a
+  # deploy/restart whose stop exceeds the timeout, or a netns (BindsTo=mullvad)
+  # cascade — it leaves a stale `config/lockfile` behind, and every subsequent
+  # start then sees it, assumes another instance is running, and immediately
+  # quits (log: "termination initiated" / "ready to exit", exit 0, WebUI never
+  # binds). systemd already guarantees a single instance of this unit, so
+  # clearing the lock before each start is safe and idempotent (rm -f is a no-op
+  # when absent). mkAfter appends to the module's own ExecStartPre (the conf
+  # install) rather than replacing it. Backstory + manual recovery: CLAUDE.md.
+  # This is deliberately NOT in the bootstrap reconciler — that reconciles config
+  # via APIs and runs once after the services; process-liveness self-healing
+  # belongs on the unit, where it runs before every (re)start.
+  systemd.services.qbittorrent.serviceConfig.ExecStartPre = lib.mkAfter [
+    "${pkgs.coreutils}/bin/rm -f /var/lib/qBittorrent/qBittorrent/config/lockfile"
+  ];
 
   # Shared traversal with the *arrs (Phase 3) over the downloads tree.
   users.users.qbittorrent.extraGroups = ["media"];
