@@ -77,9 +77,33 @@ in {
   # `single-request-reopen` makes glibc issue the two lookups sequentially on
   # separate sockets, which removes the dropped-reply race. mullvad-up does
   # `rm -rf /etc/netns/${ns}` on every (re)start, so re-append on ExecStartPost.
-  systemd.services.${ns}.serviceConfig.ExecStartPost = lib.mkAfter [
-    (pkgs.writeShellScript "${ns}-resolv-single-request" ''
-      printf 'options single-request-reopen\n' >> /etc/netns/${ns}/resolv.conf
-    '')
+  systemd.services = lib.mkMerge [
+    {
+      ${ns}.serviceConfig.ExecStartPost = lib.mkAfter [
+        (pkgs.writeShellScript "${ns}-resolv-single-request" ''
+          printf 'options single-request-reopen\n' >> /etc/netns/${ns}/resolv.conf
+        '')
+      ];
+    }
+
+    # Point every confined service at the netns resolver. VPN-Confinement writes
+    # the correct resolver (10.64.0.1) to /etc/netns/${ns}/resolv.conf, but that
+    # file is only consumed by `ip netns exec` — a systemd unit joined to the
+    # namespace via NetworkNamespacePath keeps the HOST's /etc/resolv.conf, which
+    # is the systemd-resolved stub 127.0.0.53. Inside the namespace 127.0.0.53 is
+    # a dead address, and glibc's nss-resolve can't reach systemd-resolved's
+    # socket from in here either, so name resolution fails ~100% (Prowlarr indexer
+    # tests, Radarr SkyHook, Seerr all surface it as "Resource temporarily
+    # unavailable" / EAI_AGAIN). Bind-mounting the netns resolv.conf over
+    # /etc/resolv.conf makes each unit query the resolver that actually works.
+    # (Proven live: FlareSolverr's Chromium went from 100% ERR_NAME_NOT_RESOLVED
+    # to resolving once bound; the glibc *arrs behave the same.) The
+    # single-request-reopen option appended above now applies to them too.
+    (lib.genAttrs ["qbittorrent" "prowlarr" "sonarr" "radarr" "flaresolverr"]
+      (_: {
+        serviceConfig.BindReadOnlyPaths = [
+          "/etc/netns/${ns}/resolv.conf:/etc/resolv.conf"
+        ];
+      }))
   ];
 }
