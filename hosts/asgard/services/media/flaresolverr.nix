@@ -44,4 +44,19 @@ in {
     enable = true;
     vpnNamespace = "mullvad";
   };
+
+  # DNS fix for the browser. Confined services see /etc/resolv.conf =
+  # 127.0.0.53 (the host's systemd-resolved stub). The glibc-based *arrs still
+  # resolve because nss-resolve talks to systemd-resolved over its UNIX socket,
+  # which VPN-Confinement routes across the netns boundary. But FlareSolverr's
+  # Chromium uses its OWN resolver: it reads resolv.conf and sends UDP straight
+  # to 127.0.0.53 — a dead address INSIDE the netns — so every request dies with
+  # net::ERR_NAME_NOT_RESOLVED. Bind the netns's own resolv.conf (nameserver
+  # 10.64.0.1, the Mullvad resolver reachable over the tunnel) over
+  # /etc/resolv.conf so Chromium queries a resolver it can actually reach. The
+  # file is created by mullvad.service before this unit starts (vpnConfinement
+  # orders after it).
+  systemd.services.flaresolverr.serviceConfig.BindReadOnlyPaths = [
+    "/etc/netns/mullvad/resolv.conf:/etc/resolv.conf"
+  ];
 }
