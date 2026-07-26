@@ -6,6 +6,7 @@
     ./prowlarr.nix
     ./sonarr.nix
     ./radarr.nix
+    ./flaresolverr.nix
     ./music-dl.nix
     ./yt2jelly-ui.nix
     ./seerr.nix
