@@ -11,8 +11,11 @@
 #     "Remove from client when imported" is the natural flow).
 #
 #   - NAS (/mnt/nas/media/library): final library, read by Jellyfin and
-#     written by Sonarr/Radarr at import time. Mount stays commented until
-#     the NFS export lands (draupnir, plan doc Phase 3).
+#     written by Sonarr/Radarr at import time. Lives on draupnir's tank/media,
+#     mounted over NFSv4 (draupnir exports it — hosts/draupnir/services/nfs.nix).
+#   - NAS (/mnt/nas/essentials): curated keep-forever films on draupnir's
+#     tank/essentials (snapshotted). Jellyfin adds it as a second Movies folder;
+#     a keeper is moved here out of .../library/movies by hand.
 #
 # A shared `media` group spans the *arrs, qbittorrent, and jellyfin so they
 # can traverse each other's paths without one impersonating the other. Each
@@ -29,43 +32,38 @@
     "d /srv/media           0755 root root  -"
     "d /srv/media/downloads 2775 root media -"
 
-    # TEMP(no-nas): back /mnt/nas/media/library with local dirs so the whole
-    # stack can be validated end-to-end before the NAS lands. When the
-    # fileSystems block below is uncommented, the NFS automount overlays
-    # /mnt/nas/media and these underlying dirs become invisible (harmless).
-    # Remove these six lines at the same time the mount is wired in.
-    "d /mnt/nas                    0755 root root  -"
-    "d /mnt/nas/media              0755 root root  -"
-    "d /mnt/nas/media/library      2775 root media -"
-    "d /mnt/nas/media/library/tv     2775 root media -"
-    "d /mnt/nas/media/library/movies 2775 root media -"
-    "d /mnt/nas/media/library/music  2775 root media -"
+    # Parent for the NFS automounts below (/mnt/nas/{media,essentials}).
+    # systemd creates the automount targets themselves; this just anchors /mnt/nas.
+    "d /mnt/nas 0755 root root -"
   ];
 
-  users.groups.media = {};
+  # gid pinned to 1500 — the cross-host contract with draupnir's export.
+  # NFSv4 (sec=sys) maps permissions numerically, so this group's gid must be
+  # identical on both boxes or Jellyfin/the arrs lose access to library files.
+  #
+  # GOTCHA (existing hosts): NixOS will NOT renumber an *existing* group's gid —
+  # update-users-groups.pl warns and skips it to avoid orphaning files. This line
+  # is correct for a from-scratch build, but asgard's `media` was already gid 990
+  # (auto-assigned pre-NAS), so the 990→1500 move was a one-time manual step:
+  #   sudo groupmod -g 1500 media
+  #   sudo find /srv/media -gid 990 -exec chgrp media {} +   # fix orphaned files
+  #   sudo systemctl restart sonarr radarr qbittorrent jellyfin
+  # After that the running gid matches this declaration, so it's stable.
+  users.groups.media.gid = 1500;
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # NAS activation checklist (when the NAS lands):
-  #
-  #   1. Provision the NAS, expose `/media/library` (or chosen path) over
-  #      NFS or CIFS. Decide on a stable gid for the `media` group and pin
-  #      it here (`users.groups.media.gid = <n>;`) so the NAS-side
-  #      anonuid/anongid + ACLs line up.
-  #   2. Fill in the fileSystems block below with the real device + options,
-  #      uncomment, remove this checklist.
-  #   3. Verify Sonarr/Radarr (Phase 3) can write to /mnt/nas/media/library
-  #      and Jellyfin (Phase 4) can read it.
-  #
-  # fileSystems."/mnt/nas/media" = {
-  #   device = "TODO-nas.lan.valgrindr.net:/volume1/media";
-  #   fsType = "nfs";
-  #   options = [
-  #     "x-systemd.automount"
-  #     "noauto"
-  #     "_netdev"
-  #     "soft"
-  #     "timeo=30"
-  #   ];
-  # };
-  # ──────────────────────────────────────────────────────────────────────────
+  # ── NAS mounts (draupnir tank over NFSv4) ────────────────────────────────
+  # Automount: the units come up lazily on first access and don't block boot if
+  # draupnir is briefly unreachable (soft,_netdev). tank/media = arr library;
+  # tank/essentials = the curated keep set. draupnir's export ACL restricts both
+  # to this host (192.168.1.54).
+  fileSystems."/mnt/nas/media" = {
+    device = "192.168.1.56:/tank/media";
+    fsType = "nfs";
+    options = ["x-systemd.automount" "noauto" "_netdev" "soft" "timeo=30" "nfsvers=4.2"];
+  };
+  fileSystems."/mnt/nas/essentials" = {
+    device = "192.168.1.56:/tank/essentials";
+    fsType = "nfs";
+    options = ["x-systemd.automount" "noauto" "_netdev" "soft" "timeo=30" "nfsvers=4.2"];
+  };
 }

@@ -3,9 +3,14 @@
 # upside to confining playback to Mullvad and several downsides — DLNA,
 # transcoding, client discovery all expect LAN visibility).
 #
-# Libraries: pointed at /mnt/nas/media/library via Jellyfin's web UI after
-# first boot. Read-only access is what we want; the *arrs handle writes.
-# Until the NAS lands, Jellyfin comes up empty — that's expected.
+# Libraries (set in Jellyfin's web UI after first boot; read-only — the *arrs
+# handle writes):
+#   - Movies   → /mnt/nas/media/library/movies AND /mnt/nas/essentials
+#   - Shows    → /mnt/nas/media/library/series
+#   - Music    → /mnt/nas/media/library/music
+# All are draupnir datasets mounted over NFS by storage.nix. tank/essentials is
+# the snapshotted keep-forever set — added as a second Movies folder so keepers
+# show alongside the churny arr-managed movies.
 #
 # Hardware acceleration: off. Asgard is a Proxmox VM with no /dev/dri
 # exposed by default. Enabling later means passing through a GPU at the
@@ -34,7 +39,8 @@
   # decide who actually connects.
   networking.firewall.interfaces.tailscale0.allowedTCPPorts = [8096];
 
-  # Read access to the future NAS-mounted library.
+  # Read access to the NAS-mounted library (draupnir tank/media + tank/essentials
+  # over NFS — group `media`, gid 1500 pinned in storage.nix).
   users.users.jellyfin.extraGroups = ["media"];
 
   # Persist Jellyfin's data (library DB, user accounts, metadata, plugins,
