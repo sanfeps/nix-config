@@ -18,7 +18,11 @@
 # http://127.0.0.1:8191 on the shared netns loopback.
 {
   virtualisation.oci-containers.containers.byparr = {
-    image = "ghcr.io/thephaseless/byparr:v2.1.0";
+    # Byparr only publishes mutable `latest`/`main` tags (no versioned image
+    # tags despite versioned GitHub releases), so pin by digest for repro.
+    # Bump: `skopeo inspect docker://ghcr.io/thephaseless/byparr:latest` (or the
+    # registry manifest) → new digest. This one = `latest` as of 2026-07-26.
+    image = "ghcr.io/thephaseless/byparr@sha256:01a46a2865d9a6db5eb8ead04ec0dd33b8fbe233e8565ae70b50d4cc0af4cfb0";
     extraOptions = [
       "--network=ns:/run/netns/mullvad" # egress through the Mullvad tunnel
       "--dns=10.64.0.1" # the netns (Mullvad) resolver
