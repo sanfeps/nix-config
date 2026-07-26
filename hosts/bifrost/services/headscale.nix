@@ -46,7 +46,7 @@
         "group:guest": [${guestGroupMembers}]
       },
       "hosts": {
-        "asgard": "100.64.0.2/32",
+        "asgard": "100.64.0.15/32",
         "draupnir": "100.64.0.13/32",
         "dns-server": "100.64.0.3/32"
       },

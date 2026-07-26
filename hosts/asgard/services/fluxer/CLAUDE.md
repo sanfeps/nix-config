@@ -13,14 +13,14 @@ carve out a **Fluxer-only listener on asgard's tailnet IP**:
 - `services/caddy.nix` sets `default_bind 192.168.1.54` → every vhost binds the LAN
   IP only by default. `+ ip_nonlocal_bind=1` so Caddy can bind the tailnet IP even
   before tailscaled assigns it.
-- This module's Fluxer vhost adds `bind 192.168.1.54 100.64.0.2` → Fluxer is the
-  *only* site also listening on the tailnet IP `100.64.0.2:443`.
-- `fluxer.lan.valgrindr.net` is rewritten to `100.64.0.2` (AdGuard, bifrost
+- This module's Fluxer vhost adds `bind 192.168.1.54 100.64.0.15` → Fluxer is the
+  *only* site also listening on the tailnet IP `100.64.0.15:443`.
+- `fluxer.lan.valgrindr.net` is rewritten to `100.64.0.15` (AdGuard, bifrost
   `dns.nix`) for everyone, so all clients hit the Fluxer-only socket at the
   canonical name+port — the `*.lan` wildcard cert still matches and Fluxer's baked
   `https://fluxer.lan.valgrindr.net:443` URLs stay valid. (Requires the client be
   on the tailnet; all our devices are.)
-- headscale ACL grants `group:guest → asgard:443` (= `100.64.0.2:443`, Fluxer only).
+- headscale ACL grants `group:guest → asgard:443` (= `100.64.0.15:443`, Fluxer only).
   Guests have no route/grant to `192.168.1.0/24`, so asgard's other apps (which bind
   the LAN IP) are unreachable to them.
 
@@ -146,9 +146,9 @@ already in sops.
   `livekit:7880`). This is separate from `node_ip` below (URL = signaling, node_ip = media).
 - **Voice (LiveKit) IP**: LiveKit runs in the podman bridge namespace, so it can't
   see asgard's `tailscale0` and STUN only finds the WAN IP — neither reachable by
-  clients. `livekit.yaml` pins `use_external_ip: false` + `node_ip: 100.64.0.2`
+  clients. `livekit.yaml` pins `use_external_ip: false` + `node_ip: 100.64.0.15`
   (asgard's tailnet IP) so it advertises a routable media candidate; media UDP 7882
-  / TCP 7881 are published on the host's `0.0.0.0`, so packets to `100.64.0.2:7882`
+  / TCP 7881 are published on the host's `0.0.0.0`, so packets to `100.64.0.15:7882`
   over the mesh reach the container. Works for any tailnet client. **Guest voice**
   additionally needs `asgard:7881` + `asgard:7882` in the `group:guest` ACL
   (`hosts/bifrost/services/headscale.nix`) — admins already have `*:*`.

@@ -277,7 +277,7 @@ The tailnet is self-hosted via headscale on bifrost. Key facts:
 
 - Login server: `https://headscale.valgrindr.net` (Njalla A record, DDNS-refreshed by `hosts/bifrost/services/ddns.nix`)
 - Base domain (Magic DNS): `ts.yggdrasil.lo`
-- IPv4 prefix: `100.64.0.0/10` (midgard `100.64.0.1`, asgard `100.64.0.2`, bifrost `100.64.0.3` — fresh DB after the Phase 3 cutover, assignment is by enrollment order)
+- IPv4 prefix: `100.64.0.0/10` (midgard `100.64.0.1`, asgard `100.64.0.15`, bifrost `100.64.0.3` — fresh DB after the Phase 3 cutover, assignment is by enrollment order)
 - DNS pushed to tailnet members: `192.168.1.55` (AdGuard on bifrost) — set in `services.headscale.settings.dns.nameservers.global`. Hosts that import `hosts/optional/tailscale.nix` come up with `--accept-dns=true`.
 - Exit-node: bifrost (`hosts/optional/tailscale-exit-node.nix`). Auto-approved by the inline HuJSON policy (`autoApprovers.exitNode` for `group:exit-approvers`). Opt-in per client: `tailscale set --exit-node=bifrost`.
 - Subnet router: bifrost also advertises `192.168.1.0/24` (`services.tailscaleExitNode.advertiseRoutes`, same `tailscale set` call as the exit-node flag), auto-approved via `autoApprovers.routes`. This makes the LAN-IP answers from AdGuard's `*.lan.valgrindr.net` rewrites routable off-LAN — without it, remote tailnet members resolve the names but can't reach the `192.168.1.x` targets. Clients enroll with `--accept-routes=true`; the ACL still gates which nodes may use the route (guests are not granted the LAN).
@@ -335,7 +335,7 @@ No firewall holes for backend ports, no cross-host Caddy handles, no `trusted_pr
 ## Active Hosts
 
 - **midgard**: Main desktop (x86_64-linux, AMD CPU, xanmod kernel, Steam enabled). NixOS-integrated home-manager. Tailnet `100.64.0.1`.
-- **asgard**: App server (Proxmox VM on the home LAN, x86_64-linux). Owns the finance stack (Firefly III, Ghostfolio, shared Postgres) and home-automation (Home Assistant, Mosquitto). Reachable at `192.168.1.54` on LAN and `100.64.0.2` on tailnet.
+- **asgard**: App server (Proxmox VM on the home LAN, x86_64-linux). Owns the finance stack (Firefly III, Ghostfolio, shared Postgres) and home-automation (Home Assistant, Mosquitto). Reachable at `192.168.1.54` on LAN and `100.64.0.15` on tailnet.
 - **bifrost**: Networking host (Proxmox VM on the home LAN, x86_64-linux). Owns AdGuard (LAN DNS), headscale (tailnet control plane), Njalla DDNS for `headscale.valgrindr.net`, Caddy edge with LE wildcard cert for `*.lan.valgrindr.net` (Njalla DNS-01), ntfy (push bus), and the tailnet exit-node role. Reachable at `192.168.1.55` on LAN and `100.64.0.3` on tailnet.
 - **draupnir**: NAS (bare-metal UGREEN DXP4800 Plus, x86_64-linux). Owns the raidz1 `tank` pool (encrypted ZFS) and runs storage-adjacent apps with its own Caddy — Immich (library on `tank/immich`) and Jellyfin (playback + Intel Quick Sync HW transcode, library local on `tank/media` + `tank/essentials`; moved from asgard 2026-07-26). Also exports the media library to asgard over NFS (the *arrs write it). Reachable at `192.168.1.56` on LAN and `100.64.0.13` on tailnet. See `hosts/draupnir/CLAUDE.md`.
 

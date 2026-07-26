@@ -31,7 +31,7 @@
   # dns.nix on bifrost), so the wildcard cert still matches and Fluxer's baked
   # https://fluxer.lan.valgrindr.net:443 URLs stay valid over the tailnet.
   asgardLanIp = "192.168.1.54";
-  asgardTailnetIp = "100.64.0.2";
+  asgardTailnetIp = "100.64.0.15";
   stateDir = "/var/lib/fluxer";
 
   composeFile = ./docker-compose.yml;

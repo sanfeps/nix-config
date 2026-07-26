@@ -3,7 +3,7 @@
 Core app server. Proxmox VM on the home LAN.
 
 - LAN IP: `192.168.1.54` (DHCP)
-- Tailnet IP: `100.64.0.2` (`yggdrasil` tailnet, base domain `ts.yggdrasil.lo`, control plane on bifrost)
+- Tailnet IP: `100.64.0.15` (`yggdrasil` tailnet, base domain `ts.yggdrasil.lo`, control plane on bifrost)
 - Hardware: serial console preserved (`console=ttyS0`) for Proxmox recovery; root on `/dev/sda` with `btrfs-disk-uefi.nix` (plain BTRFS subvolumes, **no wipe-on-boot**, no LUKS — this is a VM). The `/persist` convention is still honoured for portability, but `/var/lib/<svc>` survives reboots regardless of `environment.persistence` declarations — see the root CLAUDE.md for the per-host impermanence breakdown.
 
 Asgard used to also own networking (AdGuard, headscale, DDNS, exit-node). All of that moved to bifrost in the Phase 3 cutover. Asgard is now strictly an app server.
@@ -31,7 +31,7 @@ Asgard imports `hosts/optional/tailscale.nix` and enrols into the `yggdrasil` ta
 
 Asgard runs its own Caddy via the shared `services.caddyNjalla` module (`modules/nixos/services/caddy-njalla.nix`) with a wildcard LE cert for `*.lan.valgrindr.net` via Njalla DNS-01. Service modules declare their own `services.caddy.virtualHosts.*` inline. Asgard listens on `:80`/`:443` to the LAN.
 
-`services/caddy.nix` pins `default_bind 192.168.1.54`, so every vhost binds the **LAN IP only** — except the vhosts that opt into also binding asgard's **tailnet IP** with `bind 192.168.1.54 100.64.0.2`: currently **Fluxer** (`services/fluxer/default.nix`) and **Seerr** (`services/media/caddy.nix`). That makes `100.64.0.2:443` a guest-reachable listener serving only those two, so `group:guest` tailnet users (granted `asgard:443`) reach Fluxer + Seerr and nothing else; the other apps stay on the LAN IP (reachable on-LAN, and off-LAN to admins via bifrost's `192.168.1.0/24` subnet route). Each tailnet-bound name is rewritten to `100.64.0.2` in bifrost's AdGuard so all clients land on that listener. `ip_nonlocal_bind=1` lets Caddy bind the tailnet IP without waiting on tailscaled. See `services/fluxer/CLAUDE.md`.
+`services/caddy.nix` pins `default_bind 192.168.1.54`, so every vhost binds the **LAN IP only** — except the vhosts that opt into also binding asgard's **tailnet IP** with `bind 192.168.1.54 100.64.0.15`: currently **Fluxer** (`services/fluxer/default.nix`) and **Seerr** (`services/media/caddy.nix`). That makes `100.64.0.15:443` a guest-reachable listener serving only those two, so `group:guest` tailnet users (granted `asgard:443`) reach Fluxer + Seerr and nothing else; the other apps stay on the LAN IP (reachable on-LAN, and off-LAN to admins via bifrost's `192.168.1.0/24` subnet route). Each tailnet-bound name is rewritten to `100.64.0.15` in bifrost's AdGuard so all clients land on that listener. `ip_nonlocal_bind=1` lets Caddy bind the tailnet IP without waiting on tailscaled. See `services/fluxer/CLAUDE.md`.
 
 Per-host-Caddy migration status (`docs/per-host-caddy-migration-plan.md`):
 

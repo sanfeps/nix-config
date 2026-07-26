@@ -13,7 +13,7 @@
   # asgard's tailnet IP. Used only for Fluxer: its name resolves here so traffic
   # lands on asgard's tailnet-only :443 listener (guest-scoped) instead of the
   # shared LAN :443 that fronts every app. See hosts/asgard/services/fluxer/.
-  asgardTailnetIp = "100.64.0.2";
+  asgardTailnetIp = "100.64.0.15";
   lanZone = "lan.valgrindr.net";
   webPort = 3000;
   # bcrypt hash for the AdGuard webUI admin (same recipe as asgard).
@@ -126,7 +126,7 @@ in {
           }
           {
             # Seerr (request manager) answers asgard's TAILNET IP, not the LAN
-            # IP — like Fluxer. Its Caddy vhost binds 100.64.0.2:443 (a listener
+            # IP — like Fluxer. Its Caddy vhost binds 100.64.0.15:443 (a listener
             # group:guest can reach via the asgard:443 grant), so guests can
             # request media. All clients land on the tailnet listener; requires
             # the client be on the tailnet (all our devices are). See
