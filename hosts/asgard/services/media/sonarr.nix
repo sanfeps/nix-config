@@ -2,9 +2,8 @@
 # Sonarr — TV management. Confined to the Mullvad netns so RSS/indexer
 # traffic + TheTVDB lookups go through WireGuard.
 #
-# Root folder: /mnt/nas/media/library/tv (filled by the NAS mount in
-# storage.nix; until the NAS lands the import path is broken — same
-# staging-then-activate logic as everything else here).
+# Root folder: /mnt/nas/media/library/series (draupnir's tank/media, mounted
+# over NFS by storage.nix). Declared by the bootstrap reconciler.
 #
 # qBittorrent connection: Sonarr reaches qBittorrent at
 # `http://127.0.0.1:8080` (both share the `mullvad` netns loopback).

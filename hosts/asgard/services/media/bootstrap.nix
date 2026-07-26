@@ -104,7 +104,7 @@ let
       # storage.nix while the NAS isn't provisioned; once the NFS mount
       # lands the same paths are overlaid by the remote share.
       ROOT_FOLDERS = {
-          "sonarr": "/mnt/nas/media/library/tv",
+          "sonarr": "/mnt/nas/media/library/series",
           "radarr": "/mnt/nas/media/library/movies",
       }
       # Cardigann YAML definition names for public, auth-free indexers we
@@ -327,8 +327,9 @@ let
 
       def reconcile_arr_root_folder(arr, api_key):
           """Ensure Sonarr/Radarr has its library root folder registered.
-          The *arr validates the path exists + is writable; storage.nix
-          pre-creates the dirs as tmpfiles entries, so this works pre-NAS.
+          The *arr validates the path exists + is writable; the path is the
+          NFSv4 automount off draupnir's tank/media (storage.nix), whose setgid
+          library tree is created on draupnir (nfs.nix).
           """
           path = ROOT_FOLDERS[arr]
           api_path = f"/api/{API_VERSIONS[arr]}/rootfolder"
