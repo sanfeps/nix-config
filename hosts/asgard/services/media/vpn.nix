@@ -41,39 +41,17 @@
 let
   ns = "mullvad"; # ≤7 chars; VPN-Confinement uses this as ifname suffix.
 
-  # Caching DNS forwarder that runs INSIDE the netns and fronts Mullvad's
-  # in-tunnel resolver (10.64.0.1). The confined services query it at 127.0.0.1
-  # (see the resolv.conf rewrite + the ${ns}-dnsmasq service below) so repeated
-  # lookups are answered from cache instead of racing the lossy single-resolver
-  # tunnel path every time. `use-stale-cache` serves an expired answer when the
-  # upstream momentarily can't be reached (the exact transient that used to
-  # poison the .NET pools); `filter-AAAA` drops IPv6 answers (IPv4-only, which is
-  # what servarr itself recommends for this failure mode); `no-resolv` keeps its
-  # own upstream fixed at 10.64.0.1 regardless of what the netns resolv.conf says.
-  dnsmasqConf = pkgs.writeText "${ns}-dnsmasq.conf" ''
-    port=53
-    listen-address=127.0.0.1
-    bind-interfaces
-    no-resolv
-    no-hosts
-    no-poll
-    server=10.64.0.1
-    cache-size=1000
-    filter-AAAA
-    use-stale-cache=86400
-  '';
-
   # nsswitch for the confined services. The host's default puts `resolve`
   # (nss-resolve → systemd-resolved, reachable from the netns over its unix
   # socket) BEFORE `dns`, with `[!UNAVAIL=return]` — so systemd-resolved answers
   # every lookup on the HOST network and the `dns` module (our resolv.conf →
-  # dnsmasq) is never consulted. That (a) bypasses dnsmasq entirely — no cache,
-  # no filter-AAAA, so the *arrs get IPv6 and try flaky IPv6 connects over the
-  # tunnel — and (b) LEAKS DNS out the host instead of the tunnel. Binding this
-  # over /etc/nsswitch.conf drops `resolve`/`mymachines` so hosts resolve strictly
-  # via `dns` → 127.0.0.1 (dnsmasq) → 10.64.0.1 → tunnel. `systemd` stays in
-  # passwd/group for Prowlarr's DynamicUser. (Regressed with the nixpkgs bump that
-  # made systemd-resolved the nss primary.)
+  # 10.64.0.1) is never consulted. That (a) returns AAAA so the *arrs try flaky
+  # IPv6 connects over the tunnel (the `SocketException(11)` at *connect* → pool
+  # poisoned → Seerr FAILED), and (b) LEAKS DNS out the host instead of the
+  # tunnel. Binding this over /etc/nsswitch.conf drops `resolve`/`mymachines` so
+  # hosts resolve strictly via `dns` → the netns resolv.conf (10.64.0.1, over the
+  # tunnel). `systemd` stays in passwd/group for Prowlarr's DynamicUser.
+  # (Regressed with the nixpkgs bump that made systemd-resolved the nss primary.)
   nsswitchConf = pkgs.writeText "${ns}-nsswitch.conf" ''
     passwd:    files systemd
     group:     files [success=merge] systemd
@@ -110,25 +88,33 @@ in {
     # Defaults for namespaceAddress (192.168.15.1) are left untouched.
   };
 
-  # Harden DNS resolution inside the namespace. VPN-Confinement writes
-  # /etc/netns/${ns}/resolv.conf with just the single Mullvad resolver
-  # (10.64.0.1) and its firewall drops UDP/53 to anything else (leak belt), so we
-  # can't add a fallback nameserver. That single lossy tunnel-routed resolver is
-  # the root of the whole stack's flakiness: over the tunnel a reply
-  # intermittently gets dropped, getaddrinfo returns EAI_AGAIN, and every confined
-  # .NET app caches the failure in its SocketsHttpHandler pool → 503s until
-  # restarted (Prowlarr indexers, Radarr SkyHook, Seerr requests marked FAILED).
-  # `single-request-reopen` + the warm-tunnel gate only papered over it. The real
-  # fix (below): point the netns resolv.conf at a local caching dnsmasq
-  # (127.0.0.1) that fronts 10.64.0.1 — so repeated lookups hit cache, transient
-  # upstream drops are covered by use-stale-cache, and AAAA is filtered. mullvad-up
-  # does `rm -rf /etc/netns/${ns}` on every (re)start, so we rewrite it here.
+  # Harden DNS resolution inside the namespace. The confined .NET *arrs kept
+  # getting `SocketException(11): Resource temporarily unavailable (<host>:443)`
+  # at *connect* (not DNS): with systemd-resolved answering (nss `resolve`, see
+  # nsswitchConf) they received AAAA and tried IPv6 connects over the tunnel,
+  # which flake, poison the SocketsHttpHandler pool, and mark Seerr requests
+  # FAILED. Two-part fix: (1) nsswitchConf forces resolution through the netns
+  # resolv.conf (10.64.0.1, over the tunnel — no host leak; proven fast+reliable:
+  # `dig @10.64.0.1` answers instantly with IPv4); (2) disable IPv6 in the netns
+  # below so getaddrinfo (AI_ADDRCONFIG) only ever returns IPv4 → the *arrs never
+  # attempt the flaky IPv6 connect. (An in-netns dnsmasq cache was tried and
+  # dropped — it wouldn't forward to 10.64.0.1 from inside the netns; the direct
+  # resolver is reliable, so caching bought nothing.) mullvad-up does
+  # `rm -rf /etc/netns/${ns}` on every (re)start, so we rewrite resolv.conf here.
   systemd.services = lib.mkMerge [
     {
       ${ns}.serviceConfig.ExecStartPost = lib.mkAfter [
-        (pkgs.writeShellScript "${ns}-resolv-dnsmasq" ''
-          printf 'nameserver 127.0.0.1\noptions single-request-reopen no-aaaa\n' \
+        (pkgs.writeShellScript "${ns}-dns-ipv4only" ''
+          # Resolve straight to Mullvad's in-tunnel resolver (single-request-reopen
+          # sequences the A/AAAA lookups; AAAA is moot with IPv6 disabled below).
+          printf 'nameserver 10.64.0.1\noptions single-request-reopen\n' \
             > /etc/netns/${ns}/resolv.conf
+          # Kill IPv6 inside the netns so the *arrs only ever get/try IPv4 — the
+          # IPv6 tunnel path is what was failing the connects. Runs in the host ns,
+          # so hop into the netns to set the (net-namespaced) sysctls.
+          ${pkgs.iproute2}/bin/ip netns exec ${ns} \
+            ${pkgs.procps}/bin/sysctl -qw net.ipv6.conf.all.disable_ipv6=1 \
+                                          net.ipv6.conf.default.disable_ipv6=1 || true
         '')
 
         # Readiness gate: don't let mullvad.service report "active" until the
@@ -160,36 +146,6 @@ in {
           exit 0
         '')
       ];
-    }
-
-    # In-netns caching DNS forwarder (config in dnsmasqConf above). Confined to
-    # the netns so it can reach 10.64.0.1 over the tunnel; the *arrs point their
-    # resolv.conf at its 127.0.0.1 listener. partOf+after mullvad so it recycles
-    # with the netns, and the confined services order after it (below). Binds the
-    # privileged :53 via an ambient CAP_NET_BIND_SERVICE under DynamicUser.
-    {
-      "${ns}-dnsmasq" = {
-        description = "Caching DNS forwarder inside the ${ns} netns";
-        after = ["${ns}.service"];
-        partOf = ["${ns}.service"];
-        wantedBy = ["multi-user.target"];
-        vpnConfinement = {
-          enable = true;
-          vpnNamespace = ns;
-        };
-        serviceConfig = {
-          ExecStart = "${pkgs.dnsmasq}/bin/dnsmasq -k --conf-file=${dnsmasqConf}";
-          Restart = "on-failure";
-          RestartSec = 2;
-          DynamicUser = true;
-          AmbientCapabilities = ["CAP_NET_BIND_SERVICE"];
-          CapabilityBoundingSet = ["CAP_NET_BIND_SERVICE"];
-          ProtectSystem = "strict";
-          ProtectHome = true;
-          PrivateTmp = true;
-          NoNewPrivileges = true;
-        };
-      };
     }
 
     # Point every confined service at the netns resolver. VPN-Confinement writes
@@ -225,16 +181,11 @@ in {
         # via its Podman `--network=ns:` wiring (ConsistsOf=mullvad).
         partOf = ["mullvad.service"];
 
-        # They now resolve via the in-netns dnsmasq (127.0.0.1), so order after it
-        # — otherwise a service racing ahead at startup queries a dead resolver and
-        # re-poisons its pool, exactly what we're trying to stop.
-        after = ["${ns}-dnsmasq.service"];
-        wants = ["${ns}-dnsmasq.service"];
-
         serviceConfig.BindReadOnlyPaths = [
           "/etc/netns/${ns}/resolv.conf:/etc/resolv.conf"
-          # Bypass systemd-resolved (nss-resolve) so `dns` → dnsmasq is actually
-          # used — see nsswitchConf above. Without this the resolv.conf bind is inert.
+          # Bypass systemd-resolved (nss-resolve) so `dns` → the netns resolv.conf
+          # (10.64.0.1) is actually used — see nsswitchConf above. Without this the
+          # resolv.conf bind is inert (nss-resolve short-circuits it).
           "${nsswitchConf}:/etc/nsswitch.conf"
         ];
       }))
