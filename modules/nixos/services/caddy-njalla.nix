@@ -13,7 +13,7 @@ with lib; let
 
   caddyWithNjalla = pkgs.caddy.withPlugins {
     plugins = [njallaPlugin];
-    hash = "sha256-z1jVIAOnayzKAguq+22KWPH1kF3Jzyneb9ECUqk2oEA=";
+    hash = "sha256-6GocPv3hUaxXiRsczg/HlzXPR6i/m6Jgi/pjbozvNvo=";
   };
 in {
   options.services.caddyNjalla = {
