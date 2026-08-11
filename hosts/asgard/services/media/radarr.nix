@@ -1,4 +1,8 @@
-{config, ...}:
+{
+  config,
+  lib,
+  ...
+}:
 # Radarr — movies counterpart to Sonarr. Same shape, same constraints,
 # different port + root folder. See sonarr.nix for the design notes;
 # only the deltas live here.
@@ -11,6 +15,14 @@ in {
   };
 
   users.users.radarr.extraGroups = ["media"];
+
+  # Group-writable library (umask 0002 → dirs 0775 / files 0664). The library
+  # tree is setgid group `media`; without this Radarr writes movie folders 0755
+  # and files 0644, so other media-group members can't modify/delete them — in
+  # particular Jellyfin (also in `media`) can't delete a movie from its UI. Same
+  # umask the other writers use (qbittorrent.nix, music-dl.nix); see storage.nix.
+  # mkForce overrides the servarr module's own UMask=0022 default.
+  systemd.services.radarr.serviceConfig.UMask = lib.mkForce "0002";
 
   environment.persistence."${config.hostSpec.persistFolder}".directories = [
     {

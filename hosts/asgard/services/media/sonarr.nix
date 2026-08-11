@@ -1,4 +1,8 @@
-{config, ...}:
+{
+  config,
+  lib,
+  ...
+}:
 # Sonarr — TV management. Confined to the Mullvad netns so RSS/indexer
 # traffic + TheTVDB lookups go through WireGuard.
 #
@@ -27,6 +31,14 @@ in {
 
   # Static user — safe to merge extraGroups.
   users.users.sonarr.extraGroups = ["media"];
+
+  # Group-writable library (umask 0002 → dirs 0775 / files 0664). The library
+  # tree is setgid group `media`; without this Sonarr writes season folders 0755
+  # and files 0644, so other media-group members can't modify/delete them — in
+  # particular Jellyfin (also in `media`) can't delete an episode from its UI.
+  # Same umask the other writers use (qbittorrent.nix, music-dl.nix).
+  # mkForce overrides the servarr module's own UMask=0022 default.
+  systemd.services.sonarr.serviceConfig.UMask = lib.mkForce "0002";
 
   # Persist Sonarr's state directory (DB, config.xml with the API key,
   # logs, backups). The downloads + library themselves both live on the NAS
