@@ -40,6 +40,28 @@
 #   4. Deploy asgard. The namespace comes up at activation.
 let
   ns = "mullvad"; # ≤7 chars; VPN-Confinement uses this as ifname suffix.
+
+  # Caching DNS forwarder that runs INSIDE the netns and fronts Mullvad's
+  # in-tunnel resolver (10.64.0.1). The confined services query it at 127.0.0.1
+  # (see the resolv.conf rewrite + the ${ns}-dnsmasq service below) so repeated
+  # lookups are answered from cache instead of racing the lossy single-resolver
+  # tunnel path every time. `use-stale-cache` serves an expired answer when the
+  # upstream momentarily can't be reached (the exact transient that used to
+  # poison the .NET pools); `filter-AAAA` drops IPv6 answers (IPv4-only, which is
+  # what servarr itself recommends for this failure mode); `no-resolv` keeps its
+  # own upstream fixed at 10.64.0.1 regardless of what the netns resolv.conf says.
+  dnsmasqConf = pkgs.writeText "${ns}-dnsmasq.conf" ''
+    port=53
+    listen-address=127.0.0.1
+    bind-interfaces
+    no-resolv
+    no-hosts
+    no-poll
+    server=10.64.0.1
+    cache-size=1000
+    filter-AAAA
+    use-stale-cache=86400
+  '';
 in {
   imports = [inputs.vpn-confinement.nixosModules.default];
 
@@ -67,21 +89,23 @@ in {
 
   # Harden DNS resolution inside the namespace. VPN-Confinement writes
   # /etc/netns/${ns}/resolv.conf with just the single Mullvad resolver
-  # (10.64.0.1) and its firewall drops UDP/53 to anything else (leak belt), so
-  # we can't add a fallback nameserver. In a dual-stack netns glibc fires the A
-  # and AAAA queries in parallel on one socket; over the tunnel one reply
-  # intermittently gets dropped, so getaddrinfo returns EAI_AGAIN and every
-  # confined .NET app surfaces it as `SocketException (11): Resource temporarily
-  # unavailable (<host>:443)` — Prowlarr indexer tests fail, Radarr's SkyHook
-  # metadata lookups 503, and Seerr marks the resulting request FAILED.
-  # `single-request-reopen` makes glibc issue the two lookups sequentially on
-  # separate sockets, which removes the dropped-reply race. mullvad-up does
-  # `rm -rf /etc/netns/${ns}` on every (re)start, so re-append on ExecStartPost.
+  # (10.64.0.1) and its firewall drops UDP/53 to anything else (leak belt), so we
+  # can't add a fallback nameserver. That single lossy tunnel-routed resolver is
+  # the root of the whole stack's flakiness: over the tunnel a reply
+  # intermittently gets dropped, getaddrinfo returns EAI_AGAIN, and every confined
+  # .NET app caches the failure in its SocketsHttpHandler pool → 503s until
+  # restarted (Prowlarr indexers, Radarr SkyHook, Seerr requests marked FAILED).
+  # `single-request-reopen` + the warm-tunnel gate only papered over it. The real
+  # fix (below): point the netns resolv.conf at a local caching dnsmasq
+  # (127.0.0.1) that fronts 10.64.0.1 — so repeated lookups hit cache, transient
+  # upstream drops are covered by use-stale-cache, and AAAA is filtered. mullvad-up
+  # does `rm -rf /etc/netns/${ns}` on every (re)start, so we rewrite it here.
   systemd.services = lib.mkMerge [
     {
       ${ns}.serviceConfig.ExecStartPost = lib.mkAfter [
-        (pkgs.writeShellScript "${ns}-resolv-single-request" ''
-          printf 'options single-request-reopen\n' >> /etc/netns/${ns}/resolv.conf
+        (pkgs.writeShellScript "${ns}-resolv-dnsmasq" ''
+          printf 'nameserver 127.0.0.1\noptions single-request-reopen no-aaaa\n' \
+            > /etc/netns/${ns}/resolv.conf
         '')
 
         # Readiness gate: don't let mullvad.service report "active" until the
@@ -113,6 +137,36 @@ in {
           exit 0
         '')
       ];
+    }
+
+    # In-netns caching DNS forwarder (config in dnsmasqConf above). Confined to
+    # the netns so it can reach 10.64.0.1 over the tunnel; the *arrs point their
+    # resolv.conf at its 127.0.0.1 listener. partOf+after mullvad so it recycles
+    # with the netns, and the confined services order after it (below). Binds the
+    # privileged :53 via an ambient CAP_NET_BIND_SERVICE under DynamicUser.
+    {
+      "${ns}-dnsmasq" = {
+        description = "Caching DNS forwarder inside the ${ns} netns";
+        after = ["${ns}.service"];
+        partOf = ["${ns}.service"];
+        wantedBy = ["multi-user.target"];
+        vpnConfinement = {
+          enable = true;
+          vpnNamespace = ns;
+        };
+        serviceConfig = {
+          ExecStart = "${pkgs.dnsmasq}/bin/dnsmasq -k --conf-file=${dnsmasqConf}";
+          Restart = "on-failure";
+          RestartSec = 2;
+          DynamicUser = true;
+          AmbientCapabilities = ["CAP_NET_BIND_SERVICE"];
+          CapabilityBoundingSet = ["CAP_NET_BIND_SERVICE"];
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          PrivateTmp = true;
+          NoNewPrivileges = true;
+        };
+      };
     }
 
     # Point every confined service at the netns resolver. VPN-Confinement writes
@@ -147,6 +201,13 @@ in {
         # back only once the netns resolver is in place. Byparr already gets this
         # via its Podman `--network=ns:` wiring (ConsistsOf=mullvad).
         partOf = ["mullvad.service"];
+
+        # They now resolve via the in-netns dnsmasq (127.0.0.1), so order after it
+        # — otherwise a service racing ahead at startup queries a dead resolver and
+        # re-poisons its pool, exactly what we're trying to stop.
+        after = ["${ns}-dnsmasq.service"];
+        wants = ["${ns}-dnsmasq.service"];
+
         serviceConfig.BindReadOnlyPaths = [
           "/etc/netns/${ns}/resolv.conf:/etc/resolv.conf"
         ];
