@@ -83,6 +83,35 @@ in {
         (pkgs.writeShellScript "${ns}-resolv-single-request" ''
           printf 'options single-request-reopen\n' >> /etc/netns/${ns}/resolv.conf
         '')
+
+        # Readiness gate: don't let mullvad.service report "active" until the
+        # WireGuard tunnel is actually USABLE (a real DNS answer comes back from
+        # Mullvad's in-tunnel resolver 10.64.0.1). VPN-Confinement marks the unit
+        # active as soon as the interface is configured, but the handshake needs a
+        # few more seconds — so every `After=`/`PartOf=mullvad` dependent used to
+        # start against a COLD tunnel and cache the failure: the .NET *arrs poison
+        # their SocketsHttpHandler pool (EAI_AGAIN → 503s, Radarr SkyHook, Prowlarr
+        # indexer/CF-proxy tests) and Byparr's browser dies with
+        # `camoufox InvalidIP: Failed to get IP address`. This is THE race behind
+        # "the whole chain breaks after a deploy". Gating here — plus the
+        # partOf=mullvad recycle below — fixes it for the entire stack in one spot.
+        # `dig @10.64.0.1` runs inside the netns and bypasses nss, so it probes the
+        # exact tunnel+resolver path that fails (and the netns firewall permits
+        # UDP/53 to that resolver). Bounded to ~30s, then continue anyway: a hard
+        # failure here would tear down the whole confined stack via BindsTo, which
+        # is worse than a cold start.
+        (pkgs.writeShellScript "${ns}-wait-egress" ''
+          for i in $(seq 1 30); do
+            if [ -n "$(${pkgs.iproute2}/bin/ip netns exec ${ns} \
+                  ${pkgs.dnsutils}/bin/dig +short +time=1 +tries=1 @10.64.0.1 api.radarr.video 2>/dev/null)" ]; then
+              echo "${ns}: tunnel egress ready after ''${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "${ns}: WARNING tunnel egress not confirmed after 30s; continuing" >&2
+          exit 0
+        '')
       ];
     }
 
