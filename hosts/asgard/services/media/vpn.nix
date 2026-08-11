@@ -62,6 +62,29 @@ let
     filter-AAAA
     use-stale-cache=86400
   '';
+
+  # nsswitch for the confined services. The host's default puts `resolve`
+  # (nss-resolve → systemd-resolved, reachable from the netns over its unix
+  # socket) BEFORE `dns`, with `[!UNAVAIL=return]` — so systemd-resolved answers
+  # every lookup on the HOST network and the `dns` module (our resolv.conf →
+  # dnsmasq) is never consulted. That (a) bypasses dnsmasq entirely — no cache,
+  # no filter-AAAA, so the *arrs get IPv6 and try flaky IPv6 connects over the
+  # tunnel — and (b) LEAKS DNS out the host instead of the tunnel. Binding this
+  # over /etc/nsswitch.conf drops `resolve`/`mymachines` so hosts resolve strictly
+  # via `dns` → 127.0.0.1 (dnsmasq) → 10.64.0.1 → tunnel. `systemd` stays in
+  # passwd/group for Prowlarr's DynamicUser. (Regressed with the nixpkgs bump that
+  # made systemd-resolved the nss primary.)
+  nsswitchConf = pkgs.writeText "${ns}-nsswitch.conf" ''
+    passwd:    files systemd
+    group:     files [success=merge] systemd
+    shadow:    files
+    hosts:     files myhostname dns
+    networks:  files
+    ethers:    files
+    services:  files
+    protocols: files
+    rpc:       files
+  '';
 in {
   imports = [inputs.vpn-confinement.nixosModules.default];
 
@@ -210,6 +233,9 @@ in {
 
         serviceConfig.BindReadOnlyPaths = [
           "/etc/netns/${ns}/resolv.conf:/etc/resolv.conf"
+          # Bypass systemd-resolved (nss-resolve) so `dns` → dnsmasq is actually
+          # used — see nsswitchConf above. Without this the resolv.conf bind is inert.
+          "${nsswitchConf}:/etc/nsswitch.conf"
         ];
       }))
   ];
