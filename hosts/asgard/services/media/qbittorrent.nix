@@ -60,8 +60,25 @@ in {
       };
 
       BitTorrent.Session = {
-        DefaultSavePath = "/srv/media/downloads";
-        TempPath = "/srv/media/downloads/.incomplete";
+        # Downloads land on the NAS (draupnir tank/media over NFSv4), NOT on
+        # asgard's local disk. Two big concurrent downloads used to fill
+        # /srv/media/downloads → asgard's disk + the Proxmox thin-pool → 100%
+        # → the VM froze into io-error (same class as the 2026-07-26 crash).
+        # Writing to /mnt/nas/media/downloads offloads that growth to the pool.
+        #
+        # Same-dataset staging: downloads is a *subdirectory* of the tank/media
+        # dataset (not a child dataset), same filesystem as
+        # /mnt/nas/media/library — so Sonarr/Radarr's `Move` import is an atomic
+        # server-side rename, not a byte copy (faster than the old local→NFS
+        # copy). draupnir creates the dir setgid media(1500) — see nfs.nix.
+        #
+        # Netns note: qBittorrent runs in the Mullvad netns, but the NFS client
+        # transport is bound to the netns the mount was created in (the host's),
+        # not the writing process's. So these writes egress asgard→draupnir over
+        # the LAN, while peer/tracker traffic still goes through the tunnel — no
+        # leak, and the storage write doesn't pay tunnel overhead.
+        DefaultSavePath = "/mnt/nas/media/downloads";
+        TempPath = "/mnt/nas/media/downloads/.incomplete";
         TempPathEnabled = true;
 
         # Leecher-only cleanup. Mullvad forwards no ports, so we can't seed
@@ -71,7 +88,7 @@ in {
         # *arr and could delete the payload before Sonarr/Radarr import it.
         # Instead, the paused torrent reads as "done seeding", which lets the
         # *arrs' removeCompletedDownloads (bootstrap.nix) remove the torrent and
-        # delete the /srv copy after import. Without this cap the torrent seeds
+        # delete the NAS staging copy after import. Without this cap the torrent seeds
         # forever, the *arr never considers it finished, and nothing is cleaned
         # up (the symptom: completed films linger + keep "sharing").
         # MaxRatioAction: 0 = Pause, 1 = Remove, 2 = Remove+delete files.
@@ -101,8 +118,8 @@ in {
   users.users.qbittorrent.extraGroups = ["media"];
 
   # Persist torrent state (resume data, session, settings). The actual
-  # download payloads live under /srv/media/downloads which is already
-  # persisted globally via /srv.
+  # download payloads live on the NAS (/mnt/nas/media/downloads → draupnir
+  # tank/media), so they're not asgard's to persist.
   environment.persistence."${config.hostSpec.persistFolder}".directories = [
     {
       directory = "/var/lib/qBittorrent";

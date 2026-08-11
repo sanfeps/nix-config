@@ -1,15 +1,16 @@
 {...}:
 # Filesystem layout for the media stack.
 #
-# Two tiers:
+# Everything lives on the NAS (draupnir's tank pool over NFSv4). asgard keeps
+# NO media on its local disk — two concurrent big downloads used to fill
+# /srv/media/downloads and freeze the VM into io-error via a full Proxmox
+# thin-pool (see qbittorrent.nix). Three targets, all on draupnir:
 #
-#   - Local on asgard (/srv/media/downloads): in-progress torrent data,
-#     ephemeral. /srv already persists via hosts/common/core/optin-persistence,
-#     so we only need the directories. Once an *arr imports a release to the
-#     NAS library, qbittorrent removes the local source (Mullvad has no
-#     port forwarding → leecher-only → no seeding ratio to preserve, so
-#     "Remove from client when imported" is the natural flow).
-#
+#   - NAS (/mnt/nas/media/downloads): in-progress torrent data, a subdirectory
+#     of the tank/media dataset (created setgid by draupnir's nfs.nix). Once an
+#     *arr imports a release into .../library, the import is a same-dataset
+#     atomic rename and qbittorrent removes the staging copy (Mullvad has no
+#     port forwarding → leecher-only → nothing to seed/preserve).
 #   - NAS (/mnt/nas/media/library): final library, read by Jellyfin and
 #     written by Sonarr/Radarr at import time. Lives on draupnir's tank/media,
 #     mounted over NFSv4 (draupnir exports it — hosts/draupnir/services/nfs.nix).
@@ -28,10 +29,9 @@
   # `yt2jelly` CLI run as sanfe) lands under the *creator's primary group* with
   # no group-write, and the next member is locked out with "Permission denied".
   # Pair with `umask 002` in the writers (see music-dl.nix) so files land 0664.
+  # The download/library dirs live on the NAS and are created (setgid, group
+  # media) by draupnir's nfs.nix, so asgard only anchors the automount parent.
   systemd.tmpfiles.rules = [
-    "d /srv/media           0755 root root  -"
-    "d /srv/media/downloads 2775 root media -"
-
     # Parent for the NFS automounts below (/mnt/nas/{media,essentials}).
     # systemd creates the automount targets themselves; this just anchors /mnt/nas.
     "d /mnt/nas 0755 root root -"

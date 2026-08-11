@@ -29,8 +29,8 @@ in {
   users.users.sonarr.extraGroups = ["media"];
 
   # Persist Sonarr's state directory (DB, config.xml with the API key,
-  # logs, backups). The downloads + library themselves are on /srv and
-  # /mnt/nas/media respectively, so they're not in this list.
+  # logs, backups). The downloads + library themselves both live on the NAS
+  # (/mnt/nas/media), so they're not in this list.
   environment.persistence."${config.hostSpec.persistFolder}".directories = [
     {
       directory = "/var/lib/sonarr";

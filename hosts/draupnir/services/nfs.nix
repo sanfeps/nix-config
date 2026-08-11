@@ -3,6 +3,10 @@
 # Jellyfin reads them back). draupnir owns the storage; the media stack itself
 # stays on asgard — see hosts/asgard/services/media/CLAUDE.md.
 #
+# qBittorrent (on asgard) also *downloads* here now, into tank/media/downloads —
+# offloaded off asgard's small local disk so concurrent downloads can't fill it
+# and freeze the Proxmox VM. See the media-library-layout script below.
+#
 # Two datasets are exported:
 #   - tank/media       → churny, *arr-managed, re-downloadable. NOT snapshotted.
 #   - tank/essentials  → curated "keep-forever" films, snapshotted by sanoid and
@@ -37,8 +41,16 @@
     };
     script = ''
       mkdir -p /tank/media/library/{series,movies,music}
-      chgrp media /tank/media/library /tank/media/library/{series,movies,music} /tank/essentials
-      chmod 2775 /tank/media/library /tank/media/library/{series,movies,music} /tank/essentials
+      # Download staging: qBittorrent on asgard writes here over NFS instead of
+      # its local disk (see hosts/asgard/services/media/qbittorrent.nix — keeps
+      # asgard's disk + the Proxmox thin-pool from filling on concurrent
+      # downloads). A plain SUBDIRECTORY of tank/media (not a child dataset) so
+      # the *arr `Move` import into .../library is a same-filesystem atomic
+      # rename, not a copy. setgid media(1500) so qBit's writes and the *arrs'
+      # reads/moves share the group.
+      mkdir -p /tank/media/downloads/.incomplete
+      chgrp media /tank/media/library /tank/media/library/{series,movies,music} /tank/media/downloads /tank/media/downloads/.incomplete /tank/essentials
+      chmod 2775 /tank/media/library /tank/media/library/{series,movies,music} /tank/media/downloads /tank/media/downloads/.incomplete /tank/essentials
     '';
   };
 
