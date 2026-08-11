@@ -117,6 +117,20 @@ in {
   # Shared traversal with the *arrs (Phase 3) over the downloads tree.
   users.users.qbittorrent.extraGroups = ["media"];
 
+  # Group-writable downloads (umask 0002 → dirs 0775 / files 0664). REQUIRED now
+  # that downloads live in the same NAS dataset as the library: Sonarr/Radarr
+  # import by renaming the file straight out of qBittorrent's download dir, which
+  # needs WRITE on that dir. With the default umask 0022 qBittorrent creates its
+  # per-torrent dirs 0755 (group `media` can't write), so the *arrs (group media,
+  # not owner) fail the move with `IOException: Permission denied`; the import
+  # fails and — since removal is gated on a *successful* import — the torrent is
+  # never cleaned up (symptom: completed downloads pile up, never deleted). On
+  # the old local /srv layout this was hidden: that import was a cross-filesystem
+  # COPY (read-only source) + qBittorrent deleting its OWN files, so the group-
+  # write gap never mattered. Same reason the other writers set umask 002
+  # (music-dl.nix); see storage.nix / the media CLAUDE.md setgid note.
+  systemd.services.qbittorrent.serviceConfig.UMask = "0002";
+
   # Persist torrent state (resume data, session, settings). The actual
   # download payloads live on the NAS (/mnt/nas/media/downloads → draupnir
   # tank/media), so they're not asgard's to persist.
