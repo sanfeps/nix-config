@@ -101,6 +101,23 @@ in {
     # single-request-reopen option appended above now applies to them too.
     (lib.genAttrs ["qbittorrent" "prowlarr" "sonarr" "radarr"]
       (_: {
+        # Recycle each confined service whenever the netns (mullvad.service) is
+        # restarted. VPN-Confinement already sets BindsTo=mullvad (stop-when-
+        # mullvad-stops) + After=mullvad, but NOT PartOf — so a bare
+        # `systemctl restart mullvad`, or the netns churn a deploy causes when it
+        # restarts mullvad, tears the namespace down and re-creates it WITHOUT
+        # bringing these back up cleanly. The .NET *arrs are the ones that bite:
+        # if they keep running (or restart racing the fresh, not-yet-warm tunnel)
+        # their SocketsHttpHandler pool caches the EAI_AGAIN/`Resource temporarily
+        # unavailable` failure and they 503 indefinitely — Radarr's SkyHook
+        # lookups fail, so a Seerr "remove request" gets a 503 back and hangs, and
+        # Prowlarr indexer tests error — until someone manually restarts them.
+        # `PartOf=mullvad.service` propagates mullvad's restart to them; the
+        # existing `After=mullvad.service` (mullvad only goes active after its
+        # ExecStartPost writes resolv.conf above) keeps them ordered so they come
+        # back only once the netns resolver is in place. Byparr already gets this
+        # via its Podman `--network=ns:` wiring (ConsistsOf=mullvad).
+        partOf = ["mullvad.service"];
         serviceConfig.BindReadOnlyPaths = [
           "/etc/netns/${ns}/resolv.conf:/etc/resolv.conf"
         ];
