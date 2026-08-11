@@ -27,6 +27,13 @@
 
   programs = {
     home-manager.enable = true;
+
+    # Minimal zsh so a ~/.zshrc exists on every host — without it (the light
+    # server hosts don't import features/cli) zsh runs `zsh-newuser-install` on
+    # each interactive login. Just `enable`: no plugins/tools, stays light.
+    # midgard layers the full config on top via features/cli/zsh (merges fine).
+    zsh.enable = true;
+
     gpg.enable = true;
     git = {
       enable = true;
