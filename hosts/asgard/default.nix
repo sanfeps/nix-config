@@ -86,5 +86,16 @@
   systemd.services."serial-getty@ttyS0".enable = true;
   boot.initrd.systemd.enable = true;
 
+  # Proxmox guest agent: the host has `agent: 1` set, but no agent was running,
+  # so `qm reboot`/`qm shutdown` timed out. Enabling it lets Proxmox gracefully
+  # manage the VM (clean shutdowns instead of hard stops).
+  services.qemuGuest.enable = true;
+
+  # Weekly fstrim so freed blocks are TRIM'd back to the Proxmox LVM-thin pool.
+  # The scsi0 disk now has discard=on in Proxmox; without periodic trim the thin
+  # pool accumulates stale blocks and can hit out-of-data-space, which pauses the
+  # VM into `io-error` (happened 2026-07-27 — pool went 100% full, asgard froze).
+  services.fstrim.enable = true;
+
   system.stateVersion = "24.11";
 }
