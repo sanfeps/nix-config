@@ -11,6 +11,7 @@
     ./noctalia.nix
     ./vscode.nix
     ./fluxer.nix
+    ./mpv.nix
   ];
 
   home.packages = with pkgs; [

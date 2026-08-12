@@ -88,6 +88,12 @@
 
   programs.steam.enable = true;
 
+  # Installs gpu-screen-recorder plus the setcap'd gsr-kms-server helper, which
+  # is what lets the replay buffer capture via DRM/KMS instead of the portal:
+  # cheaper, and no permission prompt on every start. Client config (keybinds,
+  # buffer length, codec) lives in home/sanfe/features/desktop/recording.
+  programs.gpu-screen-recorder.enable = true;
+
   hardware.graphics.enable = true;
 
   services.xserver.videoDrivers = ["nvidia"];

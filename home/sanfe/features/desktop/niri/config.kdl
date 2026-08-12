@@ -52,6 +52,10 @@ binds {
     Mod+Return { spawn "ghostty"; }
     Mod+Space { spawn "wofi" "--show" "drun"; }
     Mod+P { spawn "voice-assistant"; }
+    // Replay buffer (gpu-screen-recorder): toggle the buffer, then save the
+    // last N seconds after something worth keeping happened.
+    Mod+Alt+R { spawn "gsr-replay"; }
+    Mod+Alt+S { spawn "gsr-save"; }
     Mod+Q { close-window; }
     Mod+Shift+E { quit; }
     Mod+Shift+L { spawn "loginctl" "lock-session"; }

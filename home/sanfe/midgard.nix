@@ -2,6 +2,7 @@
   imports = [
     ./common/core
     ./features/desktop/niri
+    ./features/desktop/recording
     ./features/desktop/theming
     ./features/desktop/voice-assistant
     ./features/games
