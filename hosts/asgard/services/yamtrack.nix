@@ -62,8 +62,12 @@ in {
 
   systemd.services.yamtrack-postgres-setup = {
     description = "Sync yamtrack Postgres role password from sops";
-    after = ["postgresql.service"];
-    requires = ["postgresql.service"];
+    # MUST be ordered after postgresql-SETUP, not just postgresql: nixpkgs runs
+    # `ensureDatabases`/`ensureUsers` in a separate `postgresql-setup.service`,
+    # so `After=postgresql.service` alone races it and the ALTER hits
+    # `ERROR: role "yamtrack" does not exist` on a from-scratch deploy.
+    after = ["postgresql-setup.service"];
+    requires = ["postgresql-setup.service"];
     wantedBy = ["multi-user.target"];
     before = ["podman-yamtrack.service"];
     serviceConfig = {

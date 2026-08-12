@@ -46,8 +46,13 @@ in {
 
   systemd.services.ghostfolio-postgres-setup = {
     description = "Sync ghostfolio Postgres role password from sops";
-    after = ["postgresql.service"];
-    requires = ["postgresql.service"];
+    # After postgresql-SETUP (which runs ensureDatabases/ensureUsers), not just
+    # postgresql — otherwise this races role creation and fails with
+    # `role "ghostfolio" does not exist` on a from-scratch deploy. Latent here
+    # (the role already exists on the running host); hit for real by yamtrack
+    # 2026-08-12.
+    after = ["postgresql-setup.service"];
+    requires = ["postgresql-setup.service"];
     wantedBy = ["multi-user.target"];
     before = ["podman-ghostfolio.service"];
     serviceConfig = {
