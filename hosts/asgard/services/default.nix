@@ -1,6 +1,13 @@
 {
   imports = [
     ./caddy.nix
+
+    # Shared PostgreSQL instance + the instance-wide dump timer. Lives here,
+    # not under ./finances, because it is host infrastructure: several
+    # unrelated app domains (finances, yamtrack, …) keep their databases on
+    # this one server, and backups.nix dumps every database on it.
+    ./postgresql
+
     ./finances
     ./home-automation
 
