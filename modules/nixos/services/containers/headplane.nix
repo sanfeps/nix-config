@@ -11,8 +11,16 @@ in {
 
     image = mkOption {
       type = types.str;
-      default = "ghcr.io/tale/headplane:latest";
-      description = "Container image to use for Headplane.";
+      default = "ghcr.io/tale/headplane:0.6.3@sha256:9476cc5adb12314b34d66c8d8d0d58a4ba0de72fdadfa9f35e4367dfe7295e67";
+      description = ''
+        Container image to use for Headplane.
+
+        PINNED `version@digest` (see modules/nixos/CLAUDE.md). 0.6.3 is what
+        bifrost was already running — and the version the cookie-secret
+        trimming workaround in hosts/bifrost/services/headplane.nix is written
+        against (0.6.3 validates `server.cookie_secret` at exactly 32 chars),
+        so an accidental upgrade could break that. Bump both halves together.
+      '';
     };
 
     port = mkOption {

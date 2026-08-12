@@ -11,8 +11,17 @@ in {
 
     image = mkOption {
       type = types.str;
-      default = "ghostfolio/ghostfolio:latest";
-      description = "Container image to use for Ghostfolio.";
+      default = "docker.io/ghostfolio/ghostfolio:3.34.0@sha256:6e99d235d99dc01a205ad3cda46ab8b08fea6b732015b8c8906d5300017efa18";
+      description = ''
+        Container image to use for Ghostfolio.
+
+        PINNED `version@digest` (see modules/nixos/CLAUDE.md). 3.34.0 is what
+        asgard was already running when the pin was introduced 2026-08-12 — the
+        pin was deliberately taken at the RUNNING version so it changed nothing
+        on deploy. Note upstream was already at 3.49.0 by then: `:latest` never
+        auto-upgraded, because the unit only pulls when the image is absent
+        locally. Upgrading is now an explicit commit.
+      '';
     };
 
     port = mkOption {

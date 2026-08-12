@@ -11,8 +11,17 @@ in {
 
     image = mkOption {
       type = types.str;
-      default = "ghcr.io/fuzzygrim/yamtrack:latest";
-      description = "Container image to use for Yamtrack.";
+      default = "ghcr.io/fuzzygrim/yamtrack:0.26.1@sha256:2c4c8ef6b73ba00aeb3e7cda5a34751f01448034a23d2fbcc98e48e44d377bb8";
+      description = ''
+        Container image to use for Yamtrack.
+
+        PINNED `version@digest`, deliberately not `:latest` — see the note in
+        modules/nixos/CLAUDE.md. The tag makes upgrades legible in `git log`;
+        the digest makes them immutable (a tag can be re-pushed, a digest
+        cannot). To upgrade: pick the new version, resolve its digest with
+        `skopeo inspect --format '{{.Digest}}' docker://<image>:<version>`,
+        update both halves, deploy.
+      '';
     };
 
     port = mkOption {
