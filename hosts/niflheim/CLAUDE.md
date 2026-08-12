@@ -9,9 +9,12 @@ scaffold/TODO state.
 
 An **intermittently-connected** low-power mini-PC at a **second physical
 location**. It is powered on **~once a month**, pulls a **raw** (`zfs send -w`,
-end-to-end encrypted) replica of `tank/immich` from draupnir into a
+end-to-end encrypted) replica of `tank/immich` **and `tank/appdata`** (asgard's
+app-state backups — Yamtrack list + ratings) from draupnir into a
 local single-disk pool `cold`, prunes to a deep retention, ntfy's the result,
-and **powers itself back off**. It never holds `tank`'s encryption key, so the
+and **powers itself back off**. `tank/essentials` is a known **open** item —
+see the scope table in `docs/immich-offsite-backup-plan.md` §1; it drives the
+`cold` disk sizing, so settle it before buying hardware. It never holds `tank`'s encryption key, so the
 copy is ciphertext at rest and unreadable on the box itself.
 
 ## Topology (planned)

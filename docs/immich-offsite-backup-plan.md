@@ -27,7 +27,9 @@ This is the third leg of 3-2-1:
 | Dataset | Offsite? | Rationale |
 |---|---|---|
 | `tank/immich` | **Yes** | Irreplaceable. Photos + the nightly Immich pg_dump that lives *inside* the dataset (`<mediaLocation>/backups`) → every snapshot is a self-contained restore point. |
+| `tank/appdata` | **Yes** | App-state backups pushed from asgard: the Yamtrack watch/read list + ratings (nightly CSV export + matching pg_dump). Hand-curated over years, not re-derivable from anything — and kilobytes, so it's free to carry. Added 2026-08-12. |
 | `tank/media` | **No** | Re-downloadable by the *arrs, high-churn. Not worth offsite bytes. |
+| `tank/essentials` | **OPEN — currently NOT replicated** | Gap, not a decision: the dataset exists and *is* snapshotted (`irreplaceable`), and `hosts/draupnir/services/nfs.nix` calls it "(later) replicable offsite", but it was never added to `syncoid-source.nix` or niflheim's pull list — so the curated keep-forever films have **no offsite copy today**. Wiring it is the standard 4-step checklist. Measured 2026-08-12: **674 KiB — effectively empty**, nothing promoted into it yet, so it is not urgent; revisit when it holds real content or when the niflheim disk is specced. |
 | `tank/backups` | **Deferred** | Finance restic target — removed 2026-07-24 (empty, unbuilt). Revisit with the finance offsite plan; it'll need its own snapshot policy to replicate. |
 
 ## 2. Why syncoid raw-send (not restic)

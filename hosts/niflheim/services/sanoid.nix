@@ -27,5 +27,10 @@
     };
 
     datasets."cold/immich".useTemplate = ["offsite"];
+
+    # App-state backups from asgard via draupnir (see hosts/draupnir/services/
+    # nfs.nix). Same template — without a prune policy the received copy grows
+    # unbounded, since syncoid only ever adds snapshots here.
+    datasets."cold/appdata".useTemplate = ["offsite"];
   };
 }

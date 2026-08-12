@@ -18,7 +18,7 @@
 # so this is safe to deploy now (it just pre-creates the user + delegation).
 let
   user = "syncoid";
-  datasets = ["tank/immich"];
+  datasets = ["tank/immich" "tank/appdata"];
   perms = "send,snapshot,bookmark,mount";
 in {
   users.groups.${user} = {};

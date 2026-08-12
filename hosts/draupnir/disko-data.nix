@@ -98,6 +98,23 @@
             recordsize = "1M";
           };
         };
+        # App-state backups pushed here by asgard over NFS: the artifacts that
+        # are irreplaceable but NOT re-derivable from a media library — today
+        # Yamtrack's watch/read list + ratings (a nightly CSV export plus the
+        # matching pg_dump). Small, low-churn, append-mostly, so the
+        # `irreplaceable` sanoid template is cheap on it. Default recordsize
+        # (128K) — these are small text/dump files, not 1M media blobs.
+        # Written by asgard's appdata-nas-sync unit; see services/nfs.nix for
+        # the uid/gid squash contract. NOTE: disko only creates datasets at
+        # format time — on the already-formatted pool this one is created by
+        # hand (same as tank/essentials):
+        #   zfs create -o mountpoint=legacy tank/appdata
+        appdata = {
+          type = "zfs_fs";
+          mountpoint = "/tank/appdata";
+          options.mountpoint = "legacy";
+        };
+
         # NOTE: a `tank/backups` dataset (finance restic offsite target) was
         # removed 2026-07-24 for simplicity — nothing wrote to it yet. Re-add it
         # here (plus its offsite legs) when the finance offsite plan is built.

@@ -12,8 +12,10 @@ phases, UGOS rollback procedure).
   notes) if factory rollback is ever needed.
 - Data: ZFS **raidz1** pool `tank` over the 4x 1 TB SATA bays (~2.7 TiB usable),
   declared in `disko-data.nix`. Datasets: `tank/media`, `tank/immich`,
-  `tank/essentials` → mounted at `/tank/*` (legacy mountpoints via fileSystems).
-  `tank/essentials` was `zfs create`d by hand (disko only formats at install).
+  `tank/essentials`, `tank/appdata` → mounted at `/tank/*` (legacy mountpoints
+  via fileSystems).
+  `tank/essentials` and `tank/appdata` were `zfs create`d by hand (disko only
+  formats at install) — `zfs create -o mountpoint=legacy tank/appdata`.
   `networking.hostId` is load-bearing for pool import — never change it.
 - Encryption: native ZFS (aes-256-gcm) on the pool root, inherited by all
   datasets. Key is a plaintext hex file at `/persist/tank.key` (auto-unlock at
@@ -93,21 +95,34 @@ active transcode is the memory-pressure case to watch (zram cushions it).
   before the ZFS legacy mounts are up. Seerr (still on asgard) and yt2jelly reach
   it over the LAN via this Caddy edge, not loopback.
 
-- **`nfs.nix`** — NFSv4 export of `tank/media` (arr library) + `tank/essentials`
-  (curated keep-set) to **asgard only** (`192.168.1.54` in the export ACL). The
+- **`nfs.nix`** — NFSv4 export of `tank/media` (arr library), `tank/essentials`
+  (curated keep-set) and `tank/appdata` (app-state backups) to **asgard only**
+  (`192.168.1.54` in the export ACL). The
   media stack stays on asgard; this box just serves the bytes. Pins
   `users.groups.media.gid = 1500` (the numeric cross-host contract — asgard's
   `media` group matches) and owns the setgid `2775` library tree
   (`/tank/media/library/{series,movies,music}`). Only firewall hole: TCP 2049.
-- **`sanoid.nix`** — automatic ZFS snapshots of `tank/immich` **and
-  `tank/essentials`** (24h / 30d / 12m / **3y** via the `irreplaceable`
+  **`tank/appdata` uses a different access model** from the other two: its
+  writer (asgard's `appdata-nas-sync`) must run as **root** — it `podman exec`s
+  into the Yamtrack container and reads `/var/backups/postgres`, mode `0700
+  postgres` — so `root_squash` fires on every write. Rather than granting
+  remote root (`no_root_squash`, rejected) the export pins the squash target:
+  `anonuid=1501,anongid=1501` → the local `appdata` user/group, which owns
+  `/tank/appdata` at `0750`. Root is stripped of privilege exactly as on the
+  other exports; it just lands as a named account instead of `nobody`. The
+  media exports need none of this because the *arrs never write as root — their
+  access rides on gid 1500.
+- **`sanoid.nix`** — automatic ZFS snapshots of `tank/immich`,
+  `tank/essentials` **and `tank/appdata`** (24h / 30d / 12m / **3y** via the
+  `irreplaceable`
   template; the 3 yearlies exist so the offsite copy can *receive* them —
   offsite plan §4). `tank/media` is deliberately NOT snapshotted (churny +
   re-downloadable; rationale in the file header). Recover files from
   `/tank/<ds>/.zfs/snapshot/<name>/`.
 - **`syncoid-source.nix`** — makes draupnir a **send-only** replication source
   for the offsite box (niflheim). A dedicated `syncoid` user has
-  `send,snapshot,bookmark,mount` delegated on `tank/immich` (no
+  `send,snapshot,bookmark,mount` delegated on `tank/immich` and
+  `tank/appdata` (no
   `destroy`/`receive`/`hold`); niflheim *pulls*. **INERT** until niflheim's
   pubkey is added to `openssh.authorizedKeys.keys`. Design:
   `docs/immich-offsite-backup-plan.md`.

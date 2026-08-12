@@ -45,5 +45,14 @@
     # to disko-data.nix, then one line here.
     datasets."tank/immich".useTemplate = ["irreplaceable"];
     datasets."tank/essentials".useTemplate = ["irreplaceable"];
+
+    # App-state backups pushed by asgard (Yamtrack CSV export + pg_dump today).
+    # Same template: the data is tiny, so 24h/30d/12m/3y costs almost nothing,
+    # and the hourlies mean a bad export or a truncated copy never overwrites
+    # the last good one irrecoverably. Also the PREREQUISITE for the offsite
+    # leg — syncoid pulls with --no-sync-snap and can only ship snapshots that
+    # already exist, so a dataset with no policy here silently replicates
+    # nothing (see hosts/draupnir/CLAUDE.md).
+    datasets."tank/appdata".useTemplate = ["irreplaceable"];
   };
 }

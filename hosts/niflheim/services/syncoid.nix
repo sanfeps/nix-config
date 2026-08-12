@@ -22,6 +22,14 @@ let
       src = "tank/immich";
       dst = "cold/immich";
     }
+    # App-state backups pushed to draupnir by asgard (Yamtrack watch/read list
+    # + ratings: nightly CSV export + pg_dump). Tiny next to immich, so it adds
+    # no meaningful time to the pull. Snapshotted on the source by draupnir's
+    # sanoid — mandatory, since --no-sync-snap can only ship existing snapshots.
+    {
+      src = "tank/appdata";
+      dst = "cold/appdata";
+    }
   ];
 
   ntfyUrl = "https://ntfy.lan.valgrindr.net";
@@ -76,7 +84,7 @@ let
       # announce, and shut down — copy #3 is current.
       sanoid --prune-snapshots --verbose || true
       notify "niflheim offsite: sync OK" "default" \
-        "cold/immich up to date at $(date -u +%FT%TZ). Powering off."
+        "${lib.concatMapStringsSep ", " (d: d.dst) datasets} up to date at $(date -u +%FT%TZ). Powering off."
       systemctl poweroff
     '';
   };
