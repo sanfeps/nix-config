@@ -110,6 +110,13 @@ in {
             };
           }
           {
+            "Yamtrack" = {
+              href = "https://yamtrack.lan.valgrindr.net";
+              description = "Films & books watched / read + ratings";
+              icon = "yamtrack.png";
+            };
+          }
+          {
             "Music" = {
               href = "https://music.lan.valgrindr.net";
               description = "Add YouTube songs to Jellyfin";

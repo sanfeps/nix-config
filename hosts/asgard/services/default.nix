@@ -11,6 +11,10 @@
     ./finances
     ./home-automation
 
+    # Media/book tracker (films + books watch/read log). Its backup path —
+    # the CSV export + the NAS copy — lives in ./appdata-backup.nix.
+    ./yamtrack.nix
+
     # TODO(media): uncomment once `media/mullvad-wg-conf` is populated in
     # hosts/asgard/secrets.yaml. The VPN namespace comes up immediately;
     # subsequent phases add per-service modules (qbittorrent, *arrs, jellyfin,

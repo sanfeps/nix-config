@@ -177,6 +177,14 @@ in {
             enabled = true;
           }
           {
+            # Yamtrack — films/books watch+read tracker, fronted by asgard's
+            # own Caddy (vhost in hosts/asgard/services/yamtrack.nix). LAN IP:
+            # this one is not shared with guests.
+            domain = "yamtrack.${lanZone}";
+            answer = asgardIp;
+            enabled = true;
+          }
+          {
             # Fluxer — self-hosted chat stack (podman-compose), fronted by
             # asgard's own Caddy. Answers asgard's TAILNET IP (not the LAN IP) so
             # all clients land on the tailnet-only :443 listener that serves only
